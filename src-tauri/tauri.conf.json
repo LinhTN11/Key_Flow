@@ -1,0 +1,49 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "keyflow",
+  "version": "0.1.0",
+  "identifier": "com.keyflow.app",
+  "build": {
+    "frontendDist": "../out/renderer",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "KeyFlow",
+        "label": "main",
+        "width": 1100,
+        "height": 720,
+        "resizable": true,
+        "fullscreen": false,
+        "transparent": true,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://raw.githubusercontent.com/LinhTN11/Key_Flow/main/update.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM0NUE5RkMyNDRGRTlERjgKUldUNG5mNUV3cDlheEdrV0JNOTNkclFJcHJDT1g2N0RVWEJnQ1lsVnhwUWhlcCtHd00wVk5TRFEK"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

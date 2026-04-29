@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: #0f0f0f;
+    color: #f5f5f5;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+}
+
+/* Transparent background for popup/popout windows */
+html[data-popout],
+html[data-popout] body,
+html[data-popout] #root,
+html[data-popout] main {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+/* Make all solid panels transparent in popup mode */
+html[data-popout] .kf-panel {
+    background: transparent !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Konva canvas background transparent in popup */
+html[data-popout] canvas {
+    background: transparent !important;
+}
+
+input,
+textarea {
+    user-select: text !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #6366f1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #818cf8;
+}
+
+/* Prevent text cursor on Konva drag */
+.konvajs-content {
+    cursor: default !important;
+}
+
+/* Hide native number spinners */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
