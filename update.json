@@ -1,11 +1,11 @@
 {
-  "version": "0.1.0",
-  "notes": "Phiên bản đầu tiên - KeyFlow Tauri v2.",
+  "version": "0.1.1",
+  "notes": "Sửa lỗi nút Hide popup: cửa sổ giờ dời ra ngoài màn hình thay vì ẩn đi, OBS vẫn capture bình thường.",
   "pub_date": "2024-04-29T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUNG5mNUV3cDlheEJuVDZzMm8zcGpzaUx2YUV5QjA5TXh0TkRXa1VoYjh2Z0llZmRLUTR0MjhpaVYvcWIrVWhndVAvY0JEcVdvQmdhQk91N3hNWlNwOWwrbFY4U0FOaGdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc3NDIzNjU4CWZpbGU6a2V5Zmxvd18wLjEuMF94NjRfZW4tVVMubXNpCm0zQ1Ryb2EvQVZESHl3RkZWRVdkQ1BsWFZXOGRUOTFtY3R6c2VxSXVlTE9rMzBQMUQ4N2RSajBhVXlpTzVhOGdub1FJTUNTTUErTjhOYkMyb0xNSEFBPT0K",
-      "url": "https://github.com/LinhTN11/Key_Flow/releases/download/v0.1.0/keyflow_0.1.0_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUNG5mNUV3cDlheElJa2dYVVl6bnhBYTBxUERiR0FZWFErRFVvM0FsdHl4YTVwdVRYaUdISDFYYUkrMjJLTENRWTZZZWJwVTJEdmpQcG1MQUl0ZUZHYUVkOWNvTmh5REFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc3NDI2NDA3CWZpbGU6a2V5Zmxvd18wLjEuMV94NjRfZW4tVVMubXNpCnBITVpiR0JMdWwwOTR3UDBJbzhFaFhRUXkwZTRoRkpTOWY5NDU1QkxTVWZtbjZ3dmEvZXBrWnh3dndiVTg2c0NwdmxDNU9DTlI4am03cnhmWWFtT0NRPT0K",
+      "url": "https://github.com/LinhTN11/Key_Flow/releases/download/v0.1.1/keyflow_0.1.1_x64_en-US.msi"
     }
   }
 }

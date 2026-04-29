@@ -75,8 +75,9 @@ async fn popout_close(app: AppHandle, section: String) -> Result<(), String> {
 async fn popout_hide(app: AppHandle, section: String) -> Result<(), String> {
     let label = format!("popout_{}", section);
     if let Some(win) = app.get_webview_window(&label) {
-        let _ = win.set_ignore_cursor_events(true);
-        let _ = win.emit("visibility", false);
+        // Move far off-screen so OBS still captures but user can't see it
+        win.set_always_on_top(false).map_err(|e| e.to_string())?;
+        win.set_position(tauri::PhysicalPosition::new(-32000, -32000)).map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -85,9 +86,9 @@ async fn popout_hide(app: AppHandle, section: String) -> Result<(), String> {
 async fn popout_show(app: AppHandle, section: String) -> Result<(), String> {
     let label = format!("popout_{}", section);
     if let Some(win) = app.get_webview_window(&label) {
-        let _ = win.set_ignore_cursor_events(false);
-        let _ = win.emit("visibility", true);
-        let _ = win.set_focus();
+        win.set_always_on_top(true).map_err(|e| e.to_string())?;
+        win.center().map_err(|e| e.to_string())?;
+        win.set_focus().map_err(|e| e.to_string())?;
     }
     Ok(())
 }

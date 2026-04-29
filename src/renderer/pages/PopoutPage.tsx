@@ -372,7 +372,6 @@ export function PopoutPage({ section }: Props) {
     const analysis = useComparisonStore((s) => s.analysis);
     const closePopout = useDisplayStore((s) => s.closePopout);
     const loadSettings = useSettingsStore((s) => s.loadSettings);
-    const [opacity, setOpacity] = useState(1);
 
     useStoreBridge({ mode: 'receive' });
     useInputEvents();
@@ -382,14 +381,15 @@ export function PopoutPage({ section }: Props) {
         document.title = `KeyFlow — ${section.charAt(0).toUpperCase() + section.slice(1)}`;
     }, [section, loadSettings]);
 
-    // Listen for visibility event from Rust
+    // When popout_open is called again from the main window, restore position + always on top
     useEffect(() => {
         if (!(window as any).__TAURI_INTERNALS__) return;
-
         let unlisten: (() => void) | undefined;
         import('@tauri-apps/api/event').then(({ listen }) => {
-            listen<boolean>('visibility', (event) => {
-                setOpacity(event.payload ? 1 : 0);
+            listen('popout-restore', async () => {
+                const win = getCurrentWindow();
+                await win.setAlwaysOnTop(true);
+                await win.center();
             }).then(fn => { unlisten = fn; });
         });
         return () => unlisten?.();
@@ -410,8 +410,6 @@ export function PopoutPage({ section }: Props) {
             className="w-screen h-screen overflow-hidden flex flex-col relative"
             style={{
                 background: 'transparent',
-                opacity: opacity,
-                transition: 'opacity 0.2s ease',
             }}
         >
             <style dangerouslySetInnerHTML={{
