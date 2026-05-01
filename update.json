@@ -1,10 +1,10 @@
 {
   "version": "1.0.1",
   "notes": "Release v1.0.1: Bug fixes and performance improvements.",
-  "pub_date": "2026-05-01T05:42:00Z",
+  "pub_date": "2026-05-01T05:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUNG5mNUV3cDlheExucWVjdUlNQ2d5YzUwakhtTmN4ckFTZlRXU0JpdVdzVGQxQ0drQVluWklWcU9KbU9CYVlRZVBURFBWZDNDSUtHME92Z2EwL0k0VVJhc1JlQU5pREFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc3NjEwMzk4CWZpbGU6S2V5Rmxvd18xLjAuMV94NjRfZW4tVVMubXNpCktvM3d2RFZPSjhHUTJWaTFpRkQ4YTRhK1MzZk03MUtyVjE0M1N2dW5XV3ZCQTRVUnhVVk96dFU4UHdpd1VJdU9oNDRlTzltYkxZUDVkVExrMTdnc0NnPT0K",
+      "signature": "untrusted comment: signature from tauri secret key\nUlVUNG5mNUV3cDlheExucWVjdUlNQ2d5YzUwakhtTmN4ckFTZlRXU0JpdVdzVGQxQ0drQVluWklWcU9KbU9CYVlRZVBURFBWZDNDSUtHME92Z2EwL0k0VVJhc1JlQU5pREFzPQ\ntrusted comment: timestamp:1777610398\tfile:KeyFlow_1.0.1_x64_en-US.msi\nS28zd3ZEVk9KODhHUTJWaTFpRkQ4YTRhK1MzZk03MUtyVjE0M1N2dW5XV3ZCQTRVUnhVVk96dFU4UHdpd1VJdU9oNDRlTzltYkxZUDVkVExrMTdnc0NnPT0K",
       "url": "https://github.com/LinhTN11/Key_Flow/releases/download/v1.0.1/KeyFlow_1.0.1_x64_en-US.msi"
     }
   }
