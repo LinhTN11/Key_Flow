@@ -82,7 +82,8 @@ async fn popout_open(app: AppHandle, section: PopoutSection) -> Result<(), Strin
         win.show().map_err(|e| e.to_string())?;
         win.set_always_on_top(true).map_err(|e| e.to_string())?;
         win.center().map_err(|e| e.to_string())?;
-        win.set_ignore_cursor_events(false).map_err(|e| e.to_string())?;
+        win.set_ignore_cursor_events(false)
+            .map_err(|e| e.to_string())?;
         let _ = app.emit(
             "popout-interaction-changed",
             PopoutInteractionPayload {
@@ -118,7 +119,8 @@ async fn popout_open(app: AppHandle, section: PopoutSection) -> Result<(), Strin
         .map_err(|e| e.to_string())?;
 
     win.center().map_err(|e| e.to_string())?;
-    win.set_ignore_cursor_events(false).map_err(|e| e.to_string())?;
+    win.set_ignore_cursor_events(false)
+        .map_err(|e| e.to_string())?;
     let _ = app.emit(
         "popout-interaction-changed",
         PopoutInteractionPayload {
@@ -166,7 +168,8 @@ async fn popout_hide(app: AppHandle, section: PopoutSection) -> Result<(), Strin
     let label = section.window_label();
     if let Some(win) = app.get_webview_window(&label) {
         win.set_always_on_top(false).map_err(|e| e.to_string())?;
-        win.set_ignore_cursor_events(true).map_err(|e| e.to_string())?;
+        win.set_ignore_cursor_events(true)
+            .map_err(|e| e.to_string())?;
         let _ = app.emit(
             "popout-interaction-changed",
             PopoutInteractionPayload {
@@ -186,7 +189,8 @@ async fn popout_show(app: AppHandle, section: PopoutSection) -> Result<(), Strin
     if let Some(win) = app.get_webview_window(&label) {
         win.set_always_on_top(true).map_err(|e| e.to_string())?;
         win.center().map_err(|e| e.to_string())?;
-        win.set_ignore_cursor_events(false).map_err(|e| e.to_string())?;
+        win.set_ignore_cursor_events(false)
+            .map_err(|e| e.to_string())?;
         let _ = app.emit(
             "popout-interaction-changed",
             PopoutInteractionPayload {
