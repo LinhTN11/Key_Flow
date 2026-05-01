@@ -11,11 +11,19 @@ function Root() {
     const settings = useSettingsStore(s => s.settings);
 
     useEffect(() => {
+        const preventWebviewContextMenu = (event: MouseEvent) => {
+            event.preventDefault();
+        };
+
+        document.addEventListener('contextmenu', preventWebviewContextMenu, { capture: true });
+        return () => document.removeEventListener('contextmenu', preventWebviewContextMenu, { capture: true });
+    }, []);
+
+    useEffect(() => {
         loadSettings().then(() => {
             const currentSettings = useSettingsStore.getState().settings;
             if (currentSettings?.language) {
                 i18n.changeLanguage(currentSettings.language);
-                console.log('[Main] Language set to:', currentSettings.language);
             }
         });
     }, [loadSettings]);
@@ -28,5 +36,7 @@ function Root() {
 }
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-    <Root />
+    <React.StrictMode>
+        <Root />
+    </React.StrictMode>
 );

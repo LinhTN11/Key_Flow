@@ -6,9 +6,11 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useInputStore } from '../stores/inputStore';
 import { useComparisonStore } from '../stores/comparisonStore';
+import { useSessionStore } from '../stores/sessionStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import { buildMatchResults, calculateScore } from '../lib/scoring';
 import { analyzeErrors, analyzeMultipleAttempts } from '../lib/errorAnalysis';
-import type { ComparisonResult } from '../types';
+import type { Attempt, ComparisonResult } from '../types';
 
 /** Small buffer after pattern ends before finalizing, allows last key release */
 const END_BUFFER_MS = 300;
@@ -29,7 +31,7 @@ export function useComparison(onFinalize?: () => void): void {
     const stateRef = useRef({ presses, activePattern, isComparing, allResults });
     stateRef.current = { presses, activePattern, isComparing, allResults };
 
-    const finalizeAttempt = useCallback(() => {
+    const finalizeAttempt = useCallback(async () => {
         if (hasFinalizedRef.current) return;
         hasFinalizedRef.current = true;
 
@@ -37,24 +39,21 @@ export function useComparison(onFinalize?: () => void): void {
             const { presses: currentPresses, activePattern: currentPattern, allResults: results } = stateRef.current;
 
             if (!currentPattern || currentPresses.length === 0) {
-                console.log('[useComparison] Finalize skipped: no pattern or no presses');
                 return;
             }
 
-            const patternDuration = currentPattern.totalDuration;
             const lastPress = currentPresses[currentPresses.length - 1];
 
             // CRITICAL: Normalize all timestamps to start at 0 for DTW compatibility
             const baseTime = currentPresses[0].startTime;
             const inputDuration = (lastPress.endTime ?? lastPress.startTime) - baseTime;
 
-            console.log(`[useComparison] Syncing: pattern=${currentPattern.name} (${patternDuration}ms), input=${currentPresses.length} events (${inputDuration}ms)`);
-
             if (inputDuration < 200) return;
 
-            const attempt = {
-                id: 'temp-' + Date.now(),
-                sessionId: '',
+            const currentSession = useSessionStore.getState().currentSession;
+            const attempt: Attempt = {
+                id: crypto.randomUUID(),
+                sessionId: currentSession?.id ?? currentPresses[0].sessionId,
                 patternId: currentPattern.id,
                 startTime: 0, // Normalized
                 endTime: lastPress.endTime ? lastPress.endTime - baseTime : lastPress.startTime - baseTime,
@@ -84,7 +83,8 @@ export function useComparison(onFinalize?: () => void): void {
                 })
             };
 
-            const eventResults = buildMatchResults(normalizedPattern, attempt);
+            const timingOffsetMs = useSettingsStore.getState().settings?.timingOffsetMs ?? 0;
+            const eventResults = buildMatchResults(normalizedPattern, attempt, timingOffsetMs);
             const scores = calculateScore(normalizedPattern, attempt, eventResults);
             const errors = analyzeErrors(normalizedPattern, attempt, eventResults);
 
@@ -97,14 +97,15 @@ export function useComparison(onFinalize?: () => void): void {
                 practiceSpeed,
             };
 
-            console.log('[useComparison] Scoring complete. Overall:', result.overallScore);
+            attempt.result = result;
+            if (attempt.sessionId) {
+                await useSessionStore.getState().saveAttempt(attempt);
+            }
             setResult(result);
 
             const updatedAllResults = [...results, result];
-            if (updatedAllResults.length >= 2) {
-                const analysis = analyzeMultipleAttempts(currentPattern, updatedAllResults);
-                setAnalysis(analysis);
-            }
+            const analysis = analyzeMultipleAttempts(currentPattern, updatedAllResults);
+            setAnalysis(analysis);
         } catch (err) {
             console.error('[useComparison] Crash during scoring:', err);
         }
@@ -121,7 +122,7 @@ export function useComparison(onFinalize?: () => void): void {
     useEffect(() => {
         if (wasComparingRef.current && !isComparing) {
             if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-            finalizeAttempt();
+            void finalizeAttempt();
         }
         wasComparingRef.current = isComparing;
     }, [isComparing, finalizeAttempt]);
@@ -154,8 +155,7 @@ export function useComparison(onFinalize?: () => void): void {
 
             if (effectiveElapsed >= scaledDuration + END_BUFFER_MS) {
                 if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-                finalizeAttempt();
-                onFinalize?.();
+                void finalizeAttempt().then(() => onFinalize?.());
             }
         }, 200);
 

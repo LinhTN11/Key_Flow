@@ -7,7 +7,7 @@ import type {
     ComparisonResult, AttemptAnalysis, KeyStat,
 } from '../types';
 import i18n from '../i18n';
-import { getDisplayLabel } from './patternUtils';
+import { getDisplayLabel, normalizeDurationTolerancePct } from './patternUtils';
 
 export function analyzeErrors(
     pattern: Pattern,
@@ -101,7 +101,7 @@ export function analyzeErrors(
         // Duration errors (for any non-missed event)
         if (result.status !== 'missed') {
             const durationDelta = Math.round(result.durationDeltaMs);
-            const tolerance = pe.duration * pe.durationTolerancePct;
+            const tolerance = pe.duration * normalizeDurationTolerancePct(pe.durationTolerancePct);
             const ms = Math.abs(durationDelta);
             if (durationDelta < -tolerance) {
                 errors.push({

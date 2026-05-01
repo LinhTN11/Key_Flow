@@ -66,6 +66,15 @@ textarea {
     background: #818cf8;
 }
 
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
 /* Prevent text cursor on Konva drag */
 .konvajs-content {
     cursor: default !important;
@@ -82,4 +91,42 @@ input::-webkit-inner-spin-button {
 input[type=number] {
     -moz-appearance: textfield;
     appearance: textfield;
+}
+
+.kf-hue-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 10px;
+    border-radius: 9999px;
+    background: linear-gradient(
+        to right,
+        #ff0000,
+        #ffff00,
+        #00ff00,
+        #00ffff,
+        #0000ff,
+        #ff00ff,
+        #ff0000
+    );
+    cursor: pointer;
+}
+
+.kf-hue-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: #fff;
+    border: 3px solid var(--thumb-color, #6366f1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.kf-hue-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: 0;
+    border-radius: 9999px;
+    background: #fff;
+    box-shadow: 0 0 0 3px var(--thumb-color, #6366f1), 0 2px 10px rgba(0, 0, 0, 0.45);
 }

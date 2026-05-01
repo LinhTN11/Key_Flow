@@ -9,7 +9,8 @@ import type {
 
 export function buildMatchResults(
     pattern: Pattern,
-    attempt: Attempt
+    attempt: Attempt,
+    timingOffsetMs = 0
 ): EventMatchResult[] {
     const results: EventMatchResult[] = [];
     const usedInputIndices = new Set<number>();
@@ -29,7 +30,7 @@ export function buildMatchResults(
             if (usedInputIndices.has(iIdx)) return;
             if (press.key !== pe.key) return;
 
-            const nPressTime = press.startTime - aOffset;
+            const nPressTime = press.startTime - aOffset + timingOffsetMs;
             const delta = nPressTime - nPatternTime;
             const absDelta = Math.abs(delta);
 
@@ -46,7 +47,7 @@ export function buildMatchResults(
             usedInputIndices.add(bestInputIdx);
 
             const press = attempt.presses[bestInputIdx];
-            const nPressTime = press.startTime - aOffset;
+            const nPressTime = press.startTime - aOffset + timingOffsetMs;
 
             const timingDeltaMs = Math.round(nPressTime - nPatternTime);
             const durationDeltaMs = Math.round((press.duration ?? 0) - pe.duration);

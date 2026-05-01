@@ -4,6 +4,8 @@
 
 import type { InputPress, RawInputEvent, GanttRow, GanttBar } from '../types';
 
+export const DEFAULT_DURATION_TOLERANCE_PCT = 0.3;
+
 /** Map of key codes to human-readable display labels. */
 const DISPLAY_LABEL_MAP: Record<string, string> = {
     MouseLeft: 'MouseLeft',
@@ -34,6 +36,17 @@ export function getDisplayLabel(key: string): string {
     if (key.startsWith('Digit')) return key.slice(5);
     if (key.startsWith('Numpad')) return 'N' + key.slice(6);
     return key;
+}
+
+/**
+ * Pattern duration tolerance is stored as a ratio: 0.3 means 30%.
+ * Older editor/import paths stored whole percentages like 20 or 25, so
+ * normalize those values when reading or editing persisted patterns.
+ */
+export function normalizeDurationTolerancePct(value: number): number {
+    if (!Number.isFinite(value)) return DEFAULT_DURATION_TOLERANCE_PCT;
+    const ratio = value > 1 ? value / 100 : value;
+    return Math.max(0, Math.min(1, ratio));
 }
 
 /**

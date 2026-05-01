@@ -7,8 +7,9 @@ import { useInputStore } from '../stores/inputStore';
 import { useComparisonStore } from '../stores/comparisonStore';
 import { useViewportStore } from '../stores/viewportStore';
 import { useSettingsStore } from '../stores/settingsStore';
-
-const isTauri = !!(window as any).__TAURI_INTERNALS__;
+import { getElectronAPI, isTauriRuntime } from '../lib/runtime';
+import type { AppSettings } from '../types';
+import i18n from '../i18n';
 
 interface StoreBridgeOptions {
     mode: 'broadcast' | 'receive';
@@ -40,8 +41,15 @@ interface StateSnapshot {
         endMs: number;
         playheadOffset: number;
     };
-    settings: unknown; // Synchronize app settings (language, layout, etc)
+    settings: AppSettings | null; // Synchronize app settings (language, layout, etc)
 }
+
+interface SettingsPayload {
+    type: 'settings';
+    data: AppSettings;
+}
+
+type BridgePayload = StateSnapshot | SettingsPayload;
 
 function buildSnapshot(): StateSnapshot {
     const input = useInputStore.getState();
@@ -78,6 +86,20 @@ function buildSnapshot(): StateSnapshot {
     };
 }
 
+async function applySettings(settings: AppSettings) {
+    const current = useSettingsStore.getState().settings;
+
+    if (settings.language && settings.language !== current?.language) {
+        i18n.changeLanguage(settings.language);
+    }
+
+    useSettingsStore.setState({ settings });
+}
+
+function isSettingsPayload(payload: BridgePayload): payload is SettingsPayload {
+    return 'type' in payload && payload.type === 'settings';
+}
+
 async function applySnapshot(snapshot: StateSnapshot) {
     // Patch inputStore
     useInputStore.setState({
@@ -104,16 +126,7 @@ async function applySnapshot(snapshot: StateSnapshot) {
 
     // Patch settingsStore
     if (snapshot.settings) {
-        const current = useSettingsStore.getState().settings;
-        const incoming = snapshot.settings as any;
-        
-        // Only update and re-i18n if language changed
-        if (incoming.language && incoming.language !== current?.language) {
-            const i18n = (await import('../i18n')).default;
-            i18n.changeLanguage(incoming.language);
-        }
-        
-        useSettingsStore.setState({ settings: incoming });
+        await applySettings(snapshot.settings);
     }
 
     // Patch viewportStore
@@ -130,6 +143,14 @@ async function applySnapshot(snapshot: StateSnapshot) {
     }));
 }
 
+async function applyBridgePayload(payload: BridgePayload) {
+    if (isSettingsPayload(payload)) {
+        await applySettings(payload.data);
+        return;
+    }
+    await applySnapshot(payload);
+}
+
 export function useStoreBridge({ mode }: StoreBridgeOptions) {
     const broadcastRef = useRef<(() => void) | null>(null);
 
@@ -139,19 +160,21 @@ export function useStoreBridge({ mode }: StoreBridgeOptions) {
             let rafId: number | null = null;
 
             const doSend = () => {
-                rafId = null;
                 const now = Date.now();
                 if (now - lastBroadcast >= 50) {
+                    rafId = null;
                     lastBroadcast = now;
                     const snapshot = buildSnapshot();
 
-                    if (isTauri) {
+                    if (isTauriRuntime()) {
                         import('@tauri-apps/api/event').then(({ emit }) => {
                             emit('state-sync', snapshot);
                         });
                     } else {
-                        window.electronAPI?.window?.broadcastState?.(snapshot);
+                        getElectronAPI()?.window?.broadcastState?.(snapshot);
                     }
+                } else {
+                    rafId = requestAnimationFrame(doSend);
                 }
             };
 
@@ -168,11 +191,21 @@ export function useStoreBridge({ mode }: StoreBridgeOptions) {
                 if (s.status !== 'recording') scheduleBroadcast();
             });
 
+            let unlistenRequest: (() => void) | undefined;
+            if (isTauriRuntime()) {
+                import('@tauri-apps/api/event').then(({ listen }) => {
+                    listen('state-request', () => {
+                        scheduleBroadcast();
+                    }).then(fn => { unlistenRequest = fn; });
+                });
+            }
+
             broadcastRef.current = () => {
                 unsubInput();
                 unsubComparison();
                 unsubSettings();
                 unsubViewport();
+                unlistenRequest?.();
                 if (rafId != null) cancelAnimationFrame(rafId);
             };
 
@@ -180,24 +213,33 @@ export function useStoreBridge({ mode }: StoreBridgeOptions) {
         }
 
         if (mode === 'receive') {
-            if (isTauri) {
+            if (isTauriRuntime()) {
                 let unlisten: (() => void) | undefined;
-                import('@tauri-apps/api/event').then(({ listen }) => {
-                    listen<StateSnapshot>('state-sync', (event) => {
+                let disposed = false;
+                import('@tauri-apps/api/event').then(({ listen, emit }) => {
+                    listen<BridgePayload>('state-sync', (event) => {
                         try {
-                            applySnapshot(event.payload);
+                            void applyBridgePayload(event.payload);
                         } catch (e) {
                             console.warn('[StoreBridge] Failed to apply Tauri snapshot:', e);
                         }
                     }).then((fn) => {
-                        unlisten = fn;
+                        if (disposed) fn();
+                        else {
+                            unlisten = fn;
+                            // Request initial state once listener is ready
+                            void emit('state-request');
+                        }
                     });
                 });
-                return () => unlisten?.();
+                return () => {
+                    disposed = true;
+                    unlisten?.();
+                };
             } else {
-                const cleanup = window.electronAPI?.window?.onStateSync?.((raw) => {
+                const cleanup = getElectronAPI()?.window?.onStateSync?.((raw) => {
                     try {
-                        applySnapshot(raw as StateSnapshot);
+                        void applyBridgePayload(raw as BridgePayload);
                     } catch (e) {
                         console.warn('[StoreBridge] Failed to apply snapshot:', e);
                     }

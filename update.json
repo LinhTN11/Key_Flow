@@ -1,11 +1,11 @@
 {
-  "version": "0.1.1",
-  "notes": "Sửa lỗi nút Hide popup: cửa sổ giờ dời ra ngoài màn hình thay vì ẩn đi, OBS vẫn capture bình thường.",
-  "pub_date": "2024-04-29T00:00:00Z",
+  "version": "1.0.1",
+  "notes": "Release v1.0.1: Bug fixes and performance improvements.",
+  "pub_date": "2026-05-01T05:42:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUNG5mNUV3cDlheElJa2dYVVl6bnhBYTBxUERiR0FZWFErRFVvM0FsdHl4YTVwdVRYaUdISDFYYUkrMjJLTENRWTZZZWJwVTJEdmpQcG1MQUl0ZUZHYUVkOWNvTmh5REFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc3NDI2NDA3CWZpbGU6a2V5Zmxvd18wLjEuMV94NjRfZW4tVVMubXNpCnBITVpiR0JMdWwwOTR3UDBJbzhFaFhRUXkwZTRoRkpTOWY5NDU1QkxTVWZtbjZ3dmEvZXBrWnh3dndiVTg2c0NwdmxDNU9DTlI4am03cnhmWWFtT0NRPT0K",
-      "url": "https://github.com/LinhTN11/Key_Flow/releases/download/v0.1.1/keyflow_0.1.1_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUNG5mNUV3cDlheExucWVjdUlNQ2d5YzUwakhtTmN4ckFTZlRXU0JpdVdzVGQxQ0drQVluWklWcU9KbU9CYVlRZVBURFBWZDNDSUtHME92Z2EwL0k0VVJhc1JlQU5pREFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc3NjEwMzk4CWZpbGU6S2V5Rmxvd18xLjAuMV94NjRfZW4tVVMubXNpCktvM3d2RFZPSjhHUTJWaTFpRkQ4YTRhK1MzZk03MUtyVjE0M1N2dW5XV3ZCQTRVUnhVVk96dFU4UHdpd1VJdU9oNDRlTzltYkxZUDVkVExrMTdnc0NnPT0K",
+      "url": "https://github.com/LinhTN11/Key_Flow/releases/download/v1.0.1/KeyFlow_1.0.1_x64_en-US.msi"
     }
   }
 }

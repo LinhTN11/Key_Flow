@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { expect, test, describe } from 'vitest';
 import { buildMatchResults } from './scoring';
 import type { Pattern, Attempt, EventMatchResult } from '../types';
@@ -7,7 +8,7 @@ import type { Pattern, Attempt, EventMatchResult } from '../types';
 // ==========================================
 function distance(a: any, b: any): number {
     if (a.key !== b.key) return 100000;
-    let timingWeight = 0.7;
+    const timingWeight = 0.7;
     let timingDiff = b.normalizedStartTime - a.normalizedStartTime;
     if (timingDiff < 0) {
         timingDiff = Math.abs(timingDiff) * 3.0;
@@ -172,7 +173,7 @@ describe('1000 Iteration Benchmark', () => {
 
         for (let i = 0; i < 1000; i++) {
             // Generate presses based on pattern
-            let presses: any[] = [];
+            const presses: any[] = [];
             pattern.events.forEach((pe) => {
                 const j5 = randomJitter(5);
                 const j20 = randomJitter(20);
@@ -180,7 +181,7 @@ describe('1000 Iteration Benchmark', () => {
                 // Miss key manually ~10% randomly
                 if (Math.random() < 0.1) return;
 
-                let start = pe.startTime + j20;
+                const start = pe.startTime + j20;
                 presses.push({
                     id: Math.random().toString(), key: pe.key, keyCode: 0, startTime: start, duration: pe.duration + j5, endTime: start + pe.duration + j5, sessionId: 's1'
                 });
@@ -255,14 +256,14 @@ describe('1000 Iteration Benchmark', () => {
         let newCorrect = 0;
 
         for (let i = 0; i < 1000; i++) {
-            let presses: any[] = [];
+            const presses: any[] = [];
             pattern.events.forEach((pe) => {
                 const j5 = randomJitter(5);
                 const j20 = randomJitter(20);
 
                 if (Math.random() < 0.05) return;
 
-                let start = pe.startTime + j20;
+                const start = pe.startTime + j20;
                 presses.push({
                     id: Math.random().toString(), key: pe.key, keyCode: 0, startTime: start, duration: pe.duration + j5, endTime: start + pe.duration + j5, sessionId: 's1'
                 });

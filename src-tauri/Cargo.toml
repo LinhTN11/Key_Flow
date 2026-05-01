@@ -1,10 +1,10 @@
 [package]
-name = "app"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+name = "keyflow"
+version = "1.0.1"
+description = "Desktop app to help gamers practice combos"
+authors = ["KeyFlow contributors"]
+license = "MIT"
+repository = "https://github.com/LinhTN11/Key_Flow"
 edition = "2021"
 rust-version = "1.77.2"
 
@@ -25,5 +25,4 @@ tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-log = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
-tauri-plugin-dialog = "2"
 rdev = "0.5.3"

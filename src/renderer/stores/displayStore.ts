@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import type { PopoutSection } from '../types';
+import { isTauriRuntime } from '../lib/runtime';
 
-
+const STORAGE_KEY = 'keyflow_display_settings';
 
 interface PopoutState {
     keyboard: boolean;
@@ -13,43 +14,62 @@ interface DisplayStore {
     showKeyboard: boolean;
     showChart: boolean;
     showScore: boolean;
-    /** @deprecated use poppedOut instead */
-    isOverlayMode: boolean;
     poppedOut: PopoutState;
 
     toggleKeyboard: () => void;
     toggleChart: () => void;
     toggleScore: () => void;
-    /** @deprecated */
-    toggleOverlayMode: () => void;
     popoutSection: (section: PopoutSection) => void;
-    closePopout: (section: PopoutSection) => void;
+    closePopout: (section: PopoutSection, closeWindow?: boolean) => void;
+}
+
+type DisplayState = Pick<DisplayStore, 'showKeyboard' | 'showChart' | 'showScore' | 'poppedOut'>;
+
+const DEFAULT_DISPLAY_STATE: DisplayState = {
+    showKeyboard: true,
+    showChart: true,
+    showScore: true,
+    poppedOut: { keyboard: false, chart: false, score: false },
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+}
+
+function readBoolean(value: unknown, fallback: boolean): boolean {
+    return typeof value === 'boolean' ? value : fallback;
+}
+
+function toStoredState(state: DisplayStore | DisplayState): Pick<DisplayState, 'showKeyboard' | 'showChart' | 'showScore'> {
+    return {
+        showKeyboard: state.showKeyboard,
+        showChart: state.showChart,
+        showScore: state.showScore,
+    };
+}
+
+function persistDisplayState(state: DisplayStore | DisplayState) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toStoredState(state)));
 }
 
 // Load initial state from localStorage if available
-const loadInitialState = () => {
+const loadInitialState = (): DisplayState => {
     try {
-        const saved = localStorage.getItem('keyflow_display_settings');
+        const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
-            const parsed = JSON.parse(saved);
+            const parsed = JSON.parse(saved) as unknown;
+            if (!isRecord(parsed)) return DEFAULT_DISPLAY_STATE;
             return {
-                showKeyboard: parsed.showKeyboard ?? true,
-                showChart: parsed.showChart ?? true,
-                showScore: parsed.showScore ?? true,
-                isOverlayMode: false,
+                showKeyboard: readBoolean(parsed.showKeyboard, true),
+                showChart: readBoolean(parsed.showChart, true),
+                showScore: readBoolean(parsed.showScore, true),
                 poppedOut: { keyboard: false, chart: false, score: false },
             };
         }
     } catch (e) {
         console.error('Failed to load display settings', e);
     }
-    return {
-        showKeyboard: true,
-        showChart: true,
-        showScore: true,
-        isOverlayMode: false,
-        poppedOut: { keyboard: false, chart: false, score: false },
-    };
+    return DEFAULT_DISPLAY_STATE;
 };
 
 export const useDisplayStore = create<DisplayStore>((set, get) => ({
@@ -61,7 +81,7 @@ export const useDisplayStore = create<DisplayStore>((set, get) => ({
             if (!newState.showKeyboard && !state.showChart && !state.showScore) {
                 return state;
             }
-            localStorage.setItem('keyflow_display_settings', JSON.stringify({ ...get(), ...newState }));
+            persistDisplayState({ ...get(), ...newState });
             return newState;
         });
     },
@@ -72,7 +92,7 @@ export const useDisplayStore = create<DisplayStore>((set, get) => ({
             if (!state.showKeyboard && !newState.showChart && !state.showScore) {
                 return state;
             }
-            localStorage.setItem('keyflow_display_settings', JSON.stringify({ ...get(), ...newState }));
+            persistDisplayState({ ...get(), ...newState });
             return newState;
         });
     },
@@ -83,22 +103,19 @@ export const useDisplayStore = create<DisplayStore>((set, get) => ({
             if (!state.showKeyboard && !state.showChart && !newState.showScore) {
                 return state;
             }
-            localStorage.setItem('keyflow_display_settings', JSON.stringify({ ...get(), ...newState, isOverlayMode: undefined }));
+            persistDisplayState({ ...get(), ...newState });
             return newState;
         });
-    },
-
-    /** @deprecated — kept for legacy callers */
-    toggleOverlayMode: () => {
-        // No-op; use popoutSection instead
     },
 
     popoutSection: (section: PopoutSection) => {
         const state = get();
         // Call Rust command to open popup window
-        import('@tauri-apps/api/core').then(({ invoke }) => {
-            invoke('popout_open', { section });
-        });
+        if (isTauriRuntime()) {
+            import('@tauri-apps/api/core').then(({ invoke }) => {
+                void invoke('popout_open', { section });
+            });
+        }
         if (!state.poppedOut[section]) {
             set((s) => ({
                 poppedOut: { ...s.poppedOut, [section]: true },
@@ -106,10 +123,12 @@ export const useDisplayStore = create<DisplayStore>((set, get) => ({
         }
     },
 
-    closePopout: (section: PopoutSection) => {
-        import('@tauri-apps/api/core').then(({ invoke }) => {
-            invoke('popout_close', { section });
-        });
+    closePopout: (section: PopoutSection, closeWindow = true) => {
+        if (closeWindow && isTauriRuntime()) {
+            import('@tauri-apps/api/core').then(({ invoke }) => {
+                void invoke('popout_close', { section });
+            });
+        }
         set((s) => ({
             poppedOut: { ...s.poppedOut, [section]: false },
         }));

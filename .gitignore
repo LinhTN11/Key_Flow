@@ -5,6 +5,12 @@ node_modules/
 out/
 dist/
 src-tauri/target/
+*.tsbuildinfo
+*.log
+
+# Local installers and tool bootstrap files
+*.msi
+*.exe
 
 # Environment
 .env

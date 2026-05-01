@@ -9,7 +9,9 @@ import { createPortal } from 'react-dom';
 import { useInputStore } from '../../stores/inputStore';
 import { useSessionStore } from '../../stores/sessionStore';
 import { usePatternStore } from '../../stores/patternStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { getDisplayLabel } from '../../lib/patternUtils';
+import { getElectronAPI, isTauriRuntime } from '../../lib/runtime';
 import { v4 as uuid } from 'uuid';
 import type { PatternEvent } from '../../types';
 
@@ -41,6 +43,7 @@ export function PatternRecorder({ variant = 'large' }: Props) {
     const { presses, clearSession, startSession: inputStartSession, stopSession: inputStopSession } = useInputStore();
     const { startSession, endSession, currentSession } = useSessionStore();
     const { createPattern } = usePatternStore();
+    const defaultTimingToleranceMs = useSettingsStore((s) => s.settings?.defaultTimingToleranceMs ?? 80);
 
     const [isNaming, setIsNaming] = useState(false);
     const [name, setName] = useState('');
@@ -69,7 +72,7 @@ export function PatternRecorder({ variant = 'large' }: Props) {
         if (isRecording) {
             await endSession();
             inputStopSession();
-            await window.electronAPI.stopListening();
+            if (!isTauriRuntime()) await getElectronAPI()?.stopListening?.();
             setStep('naming');
             setIsNaming(true);
         } else {
@@ -81,7 +84,7 @@ export function PatternRecorder({ variant = 'large' }: Props) {
 
             // Immediately set status locally
             setStep('recording');
-            await window.electronAPI.startListening(session.id);
+            if (!isTauriRuntime()) await getElectronAPI()?.startListening?.(session.id);
         }
     };
 
@@ -104,7 +107,7 @@ export function PatternRecorder({ variant = 'large' }: Props) {
                 startTime,
                 endTime,
                 duration: Math.round(p.duration || (endTime - startTime)),
-                timingToleranceMs: 80,
+                timingToleranceMs: defaultTimingToleranceMs,
                 durationTolerancePct: 0.3,
             };
         });
@@ -124,7 +127,7 @@ export function PatternRecorder({ variant = 'large' }: Props) {
         setGame('');
         setCharacter('');
         clearSession();
-        setToastMsg(t('library.save_success') || 'Combo saved!');
+        setToastMsg(t('library.save_success'));
         setShowToast(true);
     };
 
@@ -157,15 +160,15 @@ export function PatternRecorder({ variant = 'large' }: Props) {
                     <div className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-[#666] uppercase tracking-[0.2em]">{t('practice.combo_name')}</label>
-                            <input autoFocus required value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Hu Tao N1CJP" className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
+                            <input autoFocus required value={name} onChange={e => setName(e.target.value)} placeholder={t('practice.combo_name_placeholder')} className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-[#666] uppercase tracking-[0.2em]">Game</label>
-                            <input value={game} onChange={e => setGame(e.target.value)} placeholder="e.g., Genshin Impact" className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
+                            <label className="text-[10px] font-black text-[#666] uppercase tracking-[0.2em]">{t('practice.game')}</label>
+                            <input value={game} onChange={e => setGame(e.target.value)} placeholder={t('practice.game_placeholder')} className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-[#666] uppercase tracking-[0.2em]">{t('practice.character')}</label>
-                            <input value={character} onChange={e => setCharacter(e.target.value)} placeholder="e.g., Hu Tao" className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
+                            <input value={character} onChange={e => setCharacter(e.target.value)} placeholder={t('practice.character_placeholder')} className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
                         </div>
                     </div>
 
@@ -213,14 +216,14 @@ export function PatternRecorder({ variant = 'large' }: Props) {
                     disabled={isNaming}
                 >
                     <div className={`w-2 h-2 rounded-full ${isRecording ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'bg-red-500'}`} />
-                    {isRecording ? (t('practice.stop_recording') || 'Stop Recording') : (t('practice.record_new') || 'Record New')}
+                    {isRecording ? t('practice.stop_recording') : t('practice.record_new')}
                 </button>
 
                 {isRecording && (
                     <div className="flex items-center gap-2">
                         <div className="h-4 w-px bg-white/10" />
                         <span className="text-[10px] text-red-500 font-bold tracking-widest uppercase animate-pulse">
-                            Rec: {presses.length}
+                            {t('practice.recording_short')}: {presses.length}
                         </span>
                     </div>
                 )}
@@ -246,7 +249,7 @@ export function PatternRecorder({ variant = 'large' }: Props) {
                     : 'bg-red-500 group-hover:scale-110'
                     }`} />
                 <span className="tracking-tight uppercase">
-                    {isRecording ? (t('practice.stop_recording') || 'Stop Recording') : (t('practice.record_new_combo') || 'Record New Combo')}
+                    {isRecording ? t('practice.stop_recording') : t('practice.record_new_combo')}
                 </span>
             </button>
 

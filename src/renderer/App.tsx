@@ -7,12 +7,14 @@
 import React, { useState, useEffect } from 'react';
 import { PracticePage } from './pages/PracticePage';
 import { LibraryPage } from './pages/LibraryPage';
+import { HistoryPage } from './pages/HistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PopoutPage } from './pages/PopoutPage';
 import { Sidebar } from './components/ui/Sidebar';
 import type { PopoutSection } from './types';
+import { isTauriRuntime } from './lib/runtime';
 
-type Page = 'practice' | 'library' | 'settings';
+type Page = 'practice' | 'library' | 'history' | 'settings';
 
 /** Detect pop-out section from URL hash, e.g. #/popout/keyboard → 'keyboard' */
 function getPopoutSection(): PopoutSection | null {
@@ -34,15 +36,20 @@ export function App() {
 
     // Listen for main process telling us this popout was closed externally
     useEffect(() => {
-        if (!popoutSection) return;
+        if (!popoutSection || !isTauriRuntime()) return;
         // Tauri path: listen for close-requested on this webview window
         let unlistenTauri: (() => void) | undefined;
-        import('@tauri-apps/api/event').then(({ listen }) => {
+        let disposed = false;
+        import('@tauri-apps/api/event').then(({ emit, listen }) => {
             listen('tauri://close-requested', () => {
-                // Popout is being closed
-            }).then((fn) => { unlistenTauri = fn; });
+                void emit('popout-closed', popoutSection);
+            }).then((fn) => {
+                if (disposed) fn();
+                else unlistenTauri = fn;
+            });
         });
         return () => {
+            disposed = true;
             unlistenTauri?.();
         };
     }, [popoutSection]);
@@ -77,6 +84,7 @@ export function App() {
                 <div className="w-full h-full relative z-10">
                     {currentPage === 'practice' && <PracticePage />}
                     {currentPage === 'library' && <LibraryPage />}
+                    {currentPage === 'history' && <HistoryPage />}
                     {currentPage === 'settings' && <SettingsPage />}
                 </div>
             </main>

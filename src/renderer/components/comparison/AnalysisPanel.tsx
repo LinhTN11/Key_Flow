@@ -102,7 +102,3 @@ function TrendBadge({ trend }: { trend: AttemptAnalysis['trend'] }) {
         </div>
     );
 }
-
-function formatErrorType(type: string): string {
-    return type.replace(/_/g, ' ');
-}

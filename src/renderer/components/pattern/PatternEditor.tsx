@@ -7,14 +7,14 @@ import { useTranslation } from 'react-i18next';
 import Konva from 'konva';
 import { v4 as uuid } from 'uuid';
 import type { Pattern, PatternEvent, GanttViewport } from '../../types';
+import { useSettingsStore } from '../../stores/settingsStore';
+import { DEFAULT_DURATION_TOLERANCE_PCT, normalizeDurationTolerancePct } from '../../lib/patternUtils';
 
 const ROW_HEIGHT = 32;
 const ROW_PADDING = 4;
 const LABEL_WIDTH = 120;
 const BAR_RADIUS = 6;
 const RULER_HEIGHT = 32;
-const DEFAULT_ZOOM_MS = 3000;
-
 interface Props {
     pattern: Pattern;
     onSave: (updatedPattern: Pattern) => void;
@@ -35,6 +35,14 @@ const formatKey = (key: string) => {
         .replace('AltLeft', 'Alt')
         .replace('AltRight', 'Alt');
 };
+
+function cloneEvents(events: PatternEvent[]) {
+    return events.map((event) => ({ ...event }));
+}
+
+function serializeEvents(events: PatternEvent[]) {
+    return JSON.stringify(events);
+}
 
 const KeySelector = ({
     value,
@@ -165,6 +173,8 @@ const NumberInput = ({ value, onChange, label, className = "" }: { value: number
 
 export function PatternEditor({ pattern, onSave, onCancel }: Props) {
     const { t } = useTranslation();
+    const defaultZoomMs = useSettingsStore((s) => s.settings?.defaultZoomMs ?? 3000);
+    const defaultTimingToleranceMs = useSettingsStore((s) => s.settings?.defaultTimingToleranceMs ?? 80);
     const containerRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<Konva.Stage | null>(null);
     const layerRef = useRef<Konva.Layer | null>(null);
@@ -176,14 +186,19 @@ export function PatternEditor({ pattern, onSave, onCancel }: Props) {
             ...e,
             startTime: Math.round(e.startTime),
             endTime: Math.round(e.endTime),
-            duration: Math.round(e.duration)
+            duration: Math.round(e.duration),
+            durationTolerancePct: normalizeDurationTolerancePct(e.durationTolerancePct),
         }))
     );
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+    const eventHistoryRef = useRef<PatternEvent[][]>([]);
+    const eventHistoryIndexRef = useRef(0);
+    const isApplyingHistoryRef = useRef(false);
+    const [historyVersion, setHistoryVersion] = useState(0);
 
     const [viewport, setViewport] = useState<GanttViewport>({
         startMs: 0,
-        endMs: Math.max(DEFAULT_ZOOM_MS, pattern.totalDuration + 500),
+        endMs: Math.max(defaultZoomMs, pattern.totalDuration + 500),
         pixelsPerMs: 0,
     });
 
@@ -199,6 +214,49 @@ export function PatternEditor({ pattern, onSave, onCancel }: Props) {
         });
         return combined;
     }, [sessionKeys, localEvents]);
+
+    useEffect(() => {
+        if (eventHistoryRef.current.length === 0) {
+            eventHistoryRef.current = [cloneEvents(localEvents)];
+            eventHistoryIndexRef.current = 0;
+            return;
+        }
+
+        if (isApplyingHistoryRef.current) {
+            isApplyingHistoryRef.current = false;
+            return;
+        }
+
+        const current = eventHistoryRef.current[eventHistoryIndexRef.current];
+        if (serializeEvents(current) === serializeEvents(localEvents)) return;
+
+        const nextHistory = eventHistoryRef.current.slice(0, eventHistoryIndexRef.current + 1);
+        nextHistory.push(cloneEvents(localEvents));
+        eventHistoryRef.current = nextHistory.slice(-80);
+        eventHistoryIndexRef.current = eventHistoryRef.current.length - 1;
+        setHistoryVersion((version) => version + 1);
+    }, [localEvents]);
+
+    const canUndo = historyVersion >= 0 && eventHistoryIndexRef.current > 0;
+    const canRedo = historyVersion >= 0 && eventHistoryIndexRef.current < eventHistoryRef.current.length - 1;
+
+    const handleUndo = React.useCallback(() => {
+        if (eventHistoryIndexRef.current <= 0) return;
+        eventHistoryIndexRef.current -= 1;
+        isApplyingHistoryRef.current = true;
+        setSelectedEventId(null);
+        setLocalEvents(cloneEvents(eventHistoryRef.current[eventHistoryIndexRef.current]));
+        setHistoryVersion((version) => version + 1);
+    }, []);
+
+    const handleRedo = React.useCallback(() => {
+        if (eventHistoryIndexRef.current >= eventHistoryRef.current.length - 1) return;
+        eventHistoryIndexRef.current += 1;
+        isApplyingHistoryRef.current = true;
+        setSelectedEventId(null);
+        setLocalEvents(cloneEvents(eventHistoryRef.current[eventHistoryIndexRef.current]));
+        setHistoryVersion((version) => version + 1);
+    }, []);
 
     const canvasHeight = Math.max(containerRef.current?.clientHeight || 600, allKeys.length * ROW_HEIGHT + RULER_HEIGHT + 100);
 
@@ -285,7 +343,7 @@ export function PatternEditor({ pattern, onSave, onCancel }: Props) {
         rulerLayer.add(new Konva.Line({ points: [LABEL_WIDTH, RULER_HEIGHT, stageW, RULER_HEIGHT], stroke: '#333', strokeWidth: 1 }));
 
         const possibleIntervals = [10, 50, 100, 250, 500, 1000, 2000, 5000, 10000];
-        let intervalMs = possibleIntervals.find(it => it * pixPerMs >= 100) || 1000;
+        const intervalMs = possibleIntervals.find(it => it * pixPerMs >= 100) || 1000;
         const firstMarker = Math.max(0, Math.ceil(viewport.startMs / intervalMs) * intervalMs);
 
         for (let t = firstMarker; t <= viewport.endMs; t += intervalMs) {
@@ -458,7 +516,7 @@ export function PatternEditor({ pattern, onSave, onCancel }: Props) {
             const rIdx = Math.floor((pos.y - RULER_HEIGHT) / ROW_HEIGHT);
             if (rIdx >= 0 && rIdx < allKeys.length) {
                 const key = allKeys[rIdx];
-                const nE: PatternEvent = { id: uuid(), key, displayLabel: key, startTime: ms, endTime: ms + 100, duration: 100, timingToleranceMs: 50, durationTolerancePct: 20 };
+                const nE: PatternEvent = { id: uuid(), key, displayLabel: key, startTime: ms, endTime: ms + 100, duration: 100, timingToleranceMs: defaultTimingToleranceMs, durationTolerancePct: DEFAULT_DURATION_TOLERANCE_PCT };
                 setLocalEvents(prev => [...prev, nE]);
                 setSelectedEventId(nE.id);
             }
@@ -466,7 +524,20 @@ export function PatternEditor({ pattern, onSave, onCancel }: Props) {
         stage.on('dblclick', handleDblClick);
 
         const handleKD = (e: KeyboardEvent) => {
-            if ((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement?.tagName !== 'INPUT') handleDelete();
+            const activeTag = document.activeElement?.tagName;
+            if ((e.ctrlKey || e.metaKey) && activeTag !== 'INPUT') {
+                if (e.key.toLowerCase() === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleUndo();
+                    return;
+                }
+                if (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey)) {
+                    e.preventDefault();
+                    handleRedo();
+                    return;
+                }
+            }
+            if ((e.key === 'Delete' || e.key === 'Backspace') && activeTag !== 'INPUT') handleDelete();
         };
         window.addEventListener('keydown', handleKD);
 
@@ -476,7 +547,7 @@ export function PatternEditor({ pattern, onSave, onCancel }: Props) {
             stage.off('dblclick', handleDblClick);
             window.removeEventListener('keydown', handleKD);
         };
-    }, [localEvents, allKeys, viewport, selectedEventId]);
+    }, [localEvents, allKeys, viewport, selectedEventId, defaultTimingToleranceMs, handleUndo, handleRedo]);
 
     const handleWheel = (e: React.WheelEvent) => {
         if (e.ctrlKey) {
@@ -505,7 +576,6 @@ export function PatternEditor({ pattern, onSave, onCancel }: Props) {
     };
 
     const selectedEvent = useMemo(() => localEvents.find(e => e.id === selectedEventId), [localEvents, selectedEventId]);
-    const lastKeyAdded = sessionKeys.length > 0 ? sessionKeys[sessionKeys.length - 1] : "";
 
     return (
         <div className="fixed inset-0 bg-[#0f0f0f] z-[200] flex flex-col animate-in fade-in duration-300 font-sans">
@@ -518,6 +588,22 @@ export function PatternEditor({ pattern, onSave, onCancel }: Props) {
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleUndo}
+                            disabled={!canUndo}
+                            className="px-3 py-2 rounded-lg border border-white/[0.08] text-[10px] font-black uppercase tracking-widest text-[#a3a3a3] hover:text-white hover:border-[#6366f1] disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            {t('editor.undo')}
+                        </button>
+                        <button
+                            onClick={handleRedo}
+                            disabled={!canRedo}
+                            className="px-3 py-2 rounded-lg border border-white/[0.08] text-[10px] font-black uppercase tracking-widest text-[#a3a3a3] hover:text-white hover:border-[#6366f1] disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            {t('editor.redo')}
+                        </button>
+                    </div>
                     {selectedEventId && (
                         <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg">
                             <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">{t('editor.selected_event')}</span>
@@ -586,8 +672,8 @@ export function PatternEditor({ pattern, onSave, onCancel }: Props) {
                                     <input type="range" min="0" max="500" step="10" value={selectedEvent.timingToleranceMs} onChange={(e) => updateEvent(selectedEvent.id, { timingToleranceMs: parseInt(e.target.value) })} className="w-full accent-[#6366f1]" />
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="flex justify-between items-center"><label className="text-[9px] font-black text-[#555] uppercase tracking-widest block">{t('editor.duration_tolerance')}</label><span className="text-[9px] font-bold text-[#6366f1]">{selectedEvent.durationTolerancePct}%</span></div>
-                                    <input type="range" min="0" max="100" step="5" value={selectedEvent.durationTolerancePct} onChange={(e) => updateEvent(selectedEvent.id, { durationTolerancePct: parseInt(e.target.value) })} className="w-full accent-[#6366f1]" />
+                                    <div className="flex justify-between items-center"><label className="text-[9px] font-black text-[#555] uppercase tracking-widest block">{t('editor.duration_tolerance')}</label><span className="text-[9px] font-bold text-[#6366f1]">{Math.round(normalizeDurationTolerancePct(selectedEvent.durationTolerancePct) * 100)}%</span></div>
+                                    <input type="range" min="0" max="100" step="5" value={Math.round(normalizeDurationTolerancePct(selectedEvent.durationTolerancePct) * 100)} onChange={(e) => updateEvent(selectedEvent.id, { durationTolerancePct: parseInt(e.target.value, 10) / 100 })} className="w-full accent-[#6366f1]" />
                                 </div>
                             </div>
                             <button
@@ -606,6 +692,7 @@ export function PatternEditor({ pattern, onSave, onCancel }: Props) {
                     <span>{t('editor.footer_scroll')}</span>
                     <span>{t('editor.footer_zoom')}</span>
                     <span>{t('editor.footer_dblclick')}</span>
+                    <span>{t('editor.footer_undo')}</span>
                 </div>
                 <div>
                     {t('editor.events_count', { count: localEvents.length })} • {t('editor.total_time', { time: (localEvents.length > 0 ? (Math.max(...localEvents.map(e => e.endTime)) / 1000).toFixed(2) : 0) })}

@@ -21,9 +21,10 @@ export interface KeyButtonProps {
     isActive?: boolean;
     className?: string;
     width?: string;
+    activeColor?: string;
 }
 
-export function KeyButton({ label, subLabel, tlLabel, trLabel, blLabel, brLabel, isActive, className, width = 'w-12' }: KeyButtonProps) {
+export function KeyButton({ label, subLabel, tlLabel, trLabel, blLabel, brLabel, isActive, className, width = 'w-12', activeColor = '#6366f1' }: KeyButtonProps) {
     const customHeight = className?.includes('h-') || width.includes('h-');
     const isComplex = tlLabel || trLabel || blLabel || brLabel;
 
@@ -34,11 +35,16 @@ export function KeyButton({ label, subLabel, tlLabel, trLabel, blLabel, brLabel,
                 !customHeight && 'h-12',
                 width,
                 isActive
-                    ? 'bg-[#6366f1] border-[#818cf8] text-white shadow-[#6366f1]/50'
+                    ? 'text-white'
                     : 'bg-[#252525] border-[#333] text-[#a3a3a3]',
                 !isComplex && 'flex-col items-center justify-center',
                 className
             )}
+            style={isActive ? {
+                backgroundColor: activeColor,
+                borderColor: activeColor,
+                boxShadow: `0 1px 3px 0 ${activeColor}80`,
+            } : undefined}
         >
             {isComplex ? (
                 <div className="w-full h-full flex flex-col justify-between">

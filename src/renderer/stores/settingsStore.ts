@@ -1,20 +1,16 @@
 /**
  * settingsStore — Zustand store for managing app settings.
- * Synchronizes with the database via electronAPI or localStorage (Tauri).
+ * Synchronizes with the database in Tauri and localStorage in browser preview.
  */
 
 import { create } from 'zustand';
 import type { AppSettings } from '../types';
+import * as db from '../services/db';
+import { isTauriRuntime } from '../lib/runtime';
+import { DEFAULT_SETTINGS, mergeSettings } from '../lib/settings';
+import i18n from '../i18n';
 
-const isTauri = !!(window as any).__TAURI_INTERNALS__;
 const STORAGE_KEY = 'keyflow_app_settings';
-
-const DEFAULT_SETTINGS: AppSettings = {
-    language: 'vi',
-    layoutStyle: 'full',
-    theme: 'dark',
-    alwaysOnTop: true,
-} as any;
 
 interface SettingsStore {
     settings: AppSettings | null;
@@ -31,21 +27,17 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     loadSettings: async () => {
         set({ isLoading: true });
         try {
-            if (isTauri) {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                const settings = saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
-                set({ settings });
-                
-                // Apply language immediately if loaded
-                if (settings.language) {
-                    const i18n = (await import('../i18n')).default;
-                    i18n.changeLanguage(settings.language);
-                }
-            } else if (window.electronAPI) {
-                const settings = await window.electronAPI.settings.get();
-                set({ settings });
-            } else {
-                set({ settings: DEFAULT_SETTINGS });
+            const saved = localStorage.getItem(STORAGE_KEY);
+            const settings = isTauriRuntime()
+                ? await db.getSettings()
+                : saved
+                    ? mergeSettings(JSON.parse(saved) as unknown)
+                    : DEFAULT_SETTINGS;
+            set({ settings });
+
+            // Apply language immediately if loaded
+            if (settings.language) {
+                i18n.changeLanguage(settings.language);
             }
         } catch (err) {
             console.error('[SettingsStore] Failed to load settings:', err);
@@ -56,26 +48,33 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     },
 
     updateSettings: async (data) => {
+        // If we are in a popout window, we cannot mutate state locally because the main window
+        // will continuously overwrite it with old state via state-sync. Instead, forward the command.
+        if (window.location.hash.includes('/popout') && isTauriRuntime()) {
+            import('@tauri-apps/api/event').then(({ emit }) => emit('cmd-update-settings', data));
+            return;
+        }
+
         const currentSettings = get().settings;
-        const newSettings = { ...currentSettings, ...data } as AppSettings;
+        const newSettings = mergeSettings({ ...currentSettings, ...data });
 
         try {
-            if (isTauri) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings));
-                set({ settings: newSettings });
+            const persistedSettings = isTauriRuntime()
+                ? await db.setSettings(data)
+                : newSettings;
 
-                // Sync with other windows (popouts)
+            if (!isTauriRuntime()) localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedSettings));
+            set({ settings: persistedSettings });
+
+            // Sync with other windows (popouts)
+            if (isTauriRuntime()) {
                 import('@tauri-apps/api/event').then(({ emit }) => {
-                    emit('state-sync', { type: 'settings', data: newSettings });
+                    emit('state-sync', { type: 'settings', data: persistedSettings });
                 });
-            } else if (window.electronAPI) {
-                const updated = await window.electronAPI.settings.set(data);
-                set({ settings: updated });
             }
 
             // Handle language change
             if (data.language) {
-                const i18n = (await import('../i18n')).default;
                 i18n.changeLanguage(data.language);
             }
         } catch (err) {

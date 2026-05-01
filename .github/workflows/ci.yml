@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Verify release metadata
+        run: npm run verify:release
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Rust format
+        working-directory: src-tauri
+        run: cargo fmt --check
+
+      - name: Rust clippy
+        working-directory: src-tauri
+        run: cargo clippy --locked -- -D warnings
+
+      - name: Check Tauri
+        working-directory: src-tauri
+        run: cargo check --locked

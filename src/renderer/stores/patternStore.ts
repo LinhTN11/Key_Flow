@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import type { Pattern } from '../types';
 import * as db from '../services/db';
+import { getElectronAPI, isTauriRuntime } from '../lib/runtime';
 
 interface PatternStore {
     patterns: Pattern[];
@@ -17,8 +18,6 @@ interface PatternStore {
     deletePattern: (id: string) => Promise<void>;
 }
 
-const isTauri = !!(window as any).__TAURI_INTERNALS__;
-
 export const usePatternStore = create<PatternStore>((set, get) => ({
     patterns: [],
     isLoading: false,
@@ -26,17 +25,18 @@ export const usePatternStore = create<PatternStore>((set, get) => ({
     loadAll: async () => {
         set({ isLoading: true });
         try {
-            if (isTauri) {
+            if (isTauriRuntime()) {
                 const patterns = await db.getAllPatterns();
                 set({ patterns });
                 return;
             }
-            if (!window.electronAPI) {
+            const electronAPI = getElectronAPI();
+            if (!electronAPI?.patterns?.getAll) {
                 console.warn('[PatternStore] electronAPI not found, using empty storage');
                 set({ patterns: [] });
                 return;
             }
-            const patterns = await window.electronAPI.patterns.getAll();
+            const patterns = await electronAPI.patterns.getAll();
             set({ patterns });
         } catch (err) {
             console.error('[PatternStore] Failed to load patterns:', err);
@@ -46,46 +46,49 @@ export const usePatternStore = create<PatternStore>((set, get) => ({
     },
 
     createPattern: async (data) => {
-        if (isTauri) {
+        if (isTauriRuntime()) {
             const pattern = await db.createPattern(data);
             set({ patterns: [pattern, ...get().patterns] });
             return pattern;
         }
-        if (!window.electronAPI) {
+        const electronAPI = getElectronAPI();
+        if (!electronAPI?.patterns?.create) {
             const mock = { ...data, id: 'mock-' + Date.now(), createdAt: Date.now(), updatedAt: Date.now() } as Pattern;
             set({ patterns: [mock, ...get().patterns] });
             return mock;
         }
-        const pattern = await window.electronAPI.patterns.create(data);
+        const pattern = await electronAPI.patterns.create(data);
         set({ patterns: [pattern, ...get().patterns] });
         return pattern;
     },
 
     updatePattern: async (id, data) => {
-        if (isTauri) {
+        if (isTauriRuntime()) {
             const updated = await db.updatePattern(id, data);
             set({ patterns: get().patterns.map((p) => (p.id === id ? updated : p)) });
             return;
         }
-        if (!window.electronAPI) {
+        const electronAPI = getElectronAPI();
+        if (!electronAPI?.patterns?.update) {
             set({ patterns: get().patterns.map((p) => (p.id === id ? { ...p, ...data, updatedAt: Date.now() } : p)) });
             return;
         }
-        const updated = await window.electronAPI.patterns.update(id, data);
+        const updated = await electronAPI.patterns.update(id, data);
         set({ patterns: get().patterns.map((p) => (p.id === id ? updated : p)) });
     },
 
     deletePattern: async (id) => {
-        if (isTauri) {
+        if (isTauriRuntime()) {
             await db.deletePattern(id);
             set({ patterns: get().patterns.filter((p) => p.id !== id) });
             return;
         }
-        if (!window.electronAPI) {
+        const electronAPI = getElectronAPI();
+        if (!electronAPI?.patterns?.delete) {
             set({ patterns: get().patterns.filter((p) => p.id !== id) });
             return;
         }
-        await window.electronAPI.patterns.delete(id);
+        await electronAPI.patterns.delete(id);
         set({ patterns: get().patterns.filter((p) => p.id !== id) });
     },
 }));

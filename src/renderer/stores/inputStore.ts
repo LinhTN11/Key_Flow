@@ -68,7 +68,43 @@ export const useInputStore = create<InputStore>((set, get) => ({
         set({ status: 'idle' });
     },
 
-    ignoreNextUIEvent: () => set({ ignoreUntil: performance.timeOrigin + performance.now() + 64 }),
+    ignoreNextUIEvent: () => {
+        const nowMs = performance.timeOrigin + performance.now();
+        set((state) => {
+            const newActiveKeys = new Map(state.activeKeys);
+            const newPresses = [...state.presses];
+            const newRawEvents = [...state.rawEvents];
+
+            // 1. Scrub activeKeys (UNCONDITIONAL for UI events)
+            // If a UI event triggers this, any active MouseLeft is guaranteed to be the UI click itself.
+            // We unconditionally remove it to prevent it from getting stuck if the thread blocks.
+            if (newActiveKeys.has('MouseLeft')) {
+                newActiveKeys.delete('MouseLeft');
+            }
+
+            // 2. Scrub presses (Conditional, only if recent)
+            if (newPresses.length > 0) {
+                const lastPress = newPresses[newPresses.length - 1];
+                if (lastPress.key === 'MouseLeft' && lastPress.endTime !== null && (nowMs - lastPress.endTime - state.sessionBaseTime) < 500) {
+                    newPresses.pop();
+                }
+            }
+
+            // 3. Scrub rawEvents
+            if (newRawEvents.length > 0) {
+                while (newRawEvents.length > 0 && newRawEvents[newRawEvents.length - 1].key === 'MouseLeft') {
+                    newRawEvents.pop();
+                }
+            }
+
+            return {
+                ignoreUntil: nowMs + 64,
+                activeKeys: newActiveKeys,
+                presses: newPresses,
+                rawEvents: newRawEvents,
+            };
+        });
+    },
 
     handleRawEvents: (events) => {
         const state = get();
@@ -84,15 +120,21 @@ export const useInputStore = create<InputStore>((set, get) => ({
 
         if (filteredEvents.length === 0) return;
 
-        let { activeKeys, presses, startOffset, startOnFirstInput, hasFirstInput, status, freestyleBaseTime, rawEvents } = state;
+        const { activeKeys, presses, freestyleBaseTime, rawEvents, startOnFirstInput, status } = state;
+        let { startOffset, hasFirstInput } = state;
         const newActiveKeys = new Map(activeKeys);
         const newPresses = [...presses];
-        let newRawEvents = [...rawEvents];
+        const newRawEvents = [...rawEvents];
         let newFreestyleBaseTime = freestyleBaseTime;
 
         let hasChanges = false;
 
         for (const event of filteredEvents) {
+            // CRITICAL FIX: Filter out OS auto-repeats globally.
+            // If the key is already pressed, do not process subsequent keydown events.
+            if ((event.type === 'keydown' || event.type === 'mousedown') && newActiveKeys.has(event.key)) {
+                continue;
+            }
             hasChanges = true;
 
             // ── Freestyle (idle) mode: track presses for the chart ──────────

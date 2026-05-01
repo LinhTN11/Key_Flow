@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useComparisonStore } from '../../stores/comparisonStore';
 
-type Page = 'practice' | 'library' | 'settings';
+type Page = 'practice' | 'library' | 'history' | 'settings';
 
 const KeyboardIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -32,6 +32,13 @@ const LibraryIcon = () => (
     </svg>
 );
 
+const HistoryIcon = () => (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3v18h18" />
+        <path d="m7 15 4-4 3 3 5-7" />
+    </svg>
+);
+
 const SettingsIcon = () => (
     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3"></circle>
@@ -54,6 +61,7 @@ export function Sidebar({ currentPage, onNavigate }: {
     const navItems = [
         { id: 'practice', label: t('nav.practice'), icon: <PracticeIcon /> },
         { id: 'library', label: t('nav.library'), icon: <LibraryIcon /> },
+        { id: 'history', label: t('nav.history'), icon: <HistoryIcon /> },
         { id: 'settings', label: t('nav.settings'), icon: <SettingsIcon /> },
     ] as const;
 
@@ -119,16 +127,16 @@ export function Sidebar({ currentPage, onNavigate }: {
                             <div className="relative z-10">
                                 <button
                                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                    className="w-full flex items-center justify-between text-sm font-semibold text-[#f5f5f5] hover:text-white transition-all bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-md px-3 py-2 -mx-1"
+                                    className="w-full flex items-center justify-between text-sm font-semibold text-[#f5f5f5] hover:text-white transition-all mb-1 group"
                                 >
                                     <span className="truncate pr-4">{activePattern.name}</span>
-                                    <svg className={`w-3 h-3 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg className={`w-3 h-3 text-[#666] group-hover:text-white transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                         <path d="M6 9l6 6 6-6" />
                                     </svg>
                                 </button>
 
                                 {isDropdownOpen && (
-                                    <div className="absolute bottom-full left-0 w-full mb-2 bg-[#1a1a1a] border border-[#333] rounded-lg shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                    <div className="absolute bottom-full -left-3 w-[calc(100%+1.5rem)] mb-2 bg-[#1a1a1a] border border-[#333] rounded-lg shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
                                         <div className="max-h-[160px] overflow-y-auto custom-scrollbar">
                                             {markedPatterns.map(p => (
                                                 <button
@@ -137,7 +145,7 @@ export function Sidebar({ currentPage, onNavigate }: {
                                                         setPattern(p);
                                                         setIsDropdownOpen(false);
                                                     }}
-                                                    className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors hover:bg-[#6366f1]/20 ${activePattern.id === p.id ? 'text-[#6366f1] bg-[#6366f1]/5' : 'text-[#a3a3a3] hover:text-white'}`}
+                                                    className={`w-full text-left px-3 py-2 text-sm font-semibold transition-colors hover:bg-[#6366f1]/20 ${activePattern.id === p.id ? 'text-[#6366f1] bg-[#6366f1]/5' : 'text-[#a3a3a3] hover:text-white'}`}
                                                 >
                                                     {p.name}
                                                 </button>

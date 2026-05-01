@@ -56,6 +56,22 @@ const TYPE_CONFIG: Record<string, { color: string, bg: string, icon: React.React
     wrong_order: { color: 'text-purple-400', bg: 'bg-purple-500/10', icon: <SwapIcon />, border: 'border-purple-500/20' },
 };
 
+function buildFeedbackParams(err: ErrorItem): NonNullable<ErrorItem['params']> {
+    const params = err.params ?? {};
+    const name =
+        typeof params.name === 'string'
+            ? params.name
+            : typeof params.label === 'string'
+                ? params.label
+                : getDisplayLabel(err.key);
+
+    return {
+        ...params,
+        name,
+        ms: params.ms ?? '??',
+        count: params.count ?? err.occurrences,
+    };
+}
 
 export function FeedbackPanel({ errors }: Props) {
     const { t } = useTranslation();
@@ -105,13 +121,7 @@ export function FeedbackPanel({ errors }: Props) {
                             <div className="flex-1 min-w-0">
                                 <p className={`text-sm font-bold ${cfg.color} leading-tight`}>
                                     {(() => {
-                                        const p = err.params || {
-                                            name: getDisplayLabel(err.key),
-                                            ms: '??',
-                                            count: err.occurrences
-                                        };
-                                        // Ensure we pass 'name' to match the new JSON schema
-                                        const params = { ...p, name: p.name || (p as any).label || getDisplayLabel(err.key) };
+                                        const params = buildFeedbackParams(err);
                                         return t(`feedback.${err.type}`, params) as string;
                                     })()}
                                     {err.occurrences > 1 && (
@@ -122,12 +132,7 @@ export function FeedbackPanel({ errors }: Props) {
                                 </p>
                                 <p className="text-[10px] text-[#a3a3a3] mt-1.5 font-medium">
                                     {(() => {
-                                        const p = err.params || {
-                                            name: getDisplayLabel(err.key),
-                                            ms: '??',
-                                            count: err.occurrences
-                                        };
-                                        const params = { ...p, name: p.name || (p as any).label || getDisplayLabel(err.key) };
+                                        const params = buildFeedbackParams(err);
                                         return t(`feedback.${err.type}_suggestion`, params) as string;
                                     })()}
                                 </p>

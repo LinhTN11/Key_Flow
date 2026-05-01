@@ -46,6 +46,9 @@ export interface GanttBar {
     duration: number;
     isActive: boolean;
     matchStatus?: 'matched' | 'early' | 'late' | 'missed' | 'extra';
+    sourceKey?: string;
+    sourceLabel?: string;
+    isMuted?: boolean;
 }
 
 export interface GanttViewport {
@@ -105,6 +108,22 @@ export interface Attempt {
     result: ComparisonResult | null;
 }
 
+export interface PracticeHistoryItem {
+    attempt: Attempt;
+    patternName: string;
+    game: string;
+    character: string;
+    sessionStartTime: number;
+}
+
+export interface PatternStats {
+    patternId: string;
+    attemptCount: number;
+    bestScore: number;
+    averageScore: number;
+    lastAttemptAt: number | null;
+}
+
 // ============================================================
 // COMPARISON TYPES
 // ============================================================
@@ -136,7 +155,7 @@ export interface ErrorItem {
     key: string;
     message: string;
     suggestion: string;
-    params?: Record<string, any>;
+    params?: Record<string, string | number | boolean | null | undefined>;
     occurrences: number;
     eventId?: string;
 }
@@ -175,76 +194,21 @@ export interface KeyStat {
 export interface AppSettings {
     keyboardLayout: 'full' | 'fps' | 'osu';
     showMouseButtons: boolean;
+    chartFilterMode: 'focus' | 'all';
+    chartFocusKeys: string[];
     keyHighlightColor: string;
     defaultZoomMs: number;
     ganttRowHeight: number;
     ganttBarColor: string;
     patternBarColor: string;
     defaultTimingToleranceMs: number;
-    autoStartComparison: boolean;
-    showRealtimeOverlay: boolean;
     enableMetronome: boolean;
     metronomeIntervalMs: number;
+    timingOffsetMs: number;
     language: 'en' | 'vi' | 'ja' | 'zh' | 'ko';
 }
-
 // ============================================================
-// ELECTRON API (exposed via preload)
+// MISC TYPES
 // ============================================================
 
 export type PopoutSection = 'keyboard' | 'chart' | 'score';
-
-export interface ElectronAPI {
-    startListening: (sessionId: string) => Promise<void>;
-    stopListening: () => Promise<void>;
-    onInputEventsBatch: (cb: (events: RawInputEvent[]) => void) => () => void;
-    onKeysSync: (cb: (data: { activeKeys: string[] }) => void) => () => void;
-    patterns: {
-        create: (data: Omit<Pattern, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Pattern>;
-        getAll: () => Promise<Pattern[]>;
-        getById: (id: string) => Promise<Pattern | null>;
-        update: (id: string, data: Partial<Pattern>) => Promise<Pattern>;
-        delete: (id: string) => Promise<void>;
-    };
-    sessions: {
-        create: (patternId: string | null) => Promise<Session>;
-        end: (id: string) => Promise<void>;
-    };
-    attempts: {
-        save: (data: Omit<Attempt, 'id'>) => Promise<Attempt>;
-        getByPattern: (patternId: string) => Promise<Attempt[]>;
-    };
-    settings: {
-        get: () => Promise<AppSettings>;
-        set: (data: Partial<AppSettings>) => Promise<AppSettings>;
-    };
-    window: {
-        setAlwaysOnTop: (flag: boolean) => Promise<void>;
-        getAlwaysOnTop: () => Promise<boolean>;
-        // Legacy (kept for type compat)
-        setOverlayMode: (flag: boolean) => Promise<void>;
-        getOverlayMode: () => Promise<boolean>;
-        // Pop-out window API
-        popout: (section: PopoutSection) => Promise<void>;
-        closePopout: (section: PopoutSection) => Promise<void>;
-        onPopoutClosed: (cb: (section: PopoutSection) => void) => () => void;
-        // State sync bridge
-        broadcastState: (snapshot: unknown) => void;
-        onStateSync: (cb: (snapshot: unknown) => void) => () => void;
-        // Per-window always-on-top toggle (used by popups)
-        toggleAlwaysOnTop: () => Promise<boolean>;
-        getAlwaysOnTopSelf: () => Promise<boolean>;
-        // Hide/show popup (opacity-based, window stays alive for OBS)
-        hidePopout: (section: string) => Promise<void>;
-        showPopout: (section: string) => Promise<void>;
-        isPopoutHidden: (section: string) => Promise<boolean>;
-        // Content visibility toggle via CSS injection
-        onPopoutVisibility: (cb: (visible: boolean) => void) => () => void;
-    };
-}
-
-declare global {
-    interface Window {
-        electronAPI: ElectronAPI;
-    }
-}

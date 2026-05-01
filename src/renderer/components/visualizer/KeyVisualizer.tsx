@@ -4,12 +4,19 @@ import { useInputStore } from '../../stores/inputStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { KeyButton } from './KeyButton';
 import { MouseVisualizer } from './MouseVisualizer';
-import { KEYBOARD_LAYOUTS, FPS_ALLOWED_KEYS, OSU_ALLOWED_KEYS } from '../../lib/keyboardLayouts';
+import { KEYBOARD_LAYOUTS, FPS_ALLOWED_KEYS, OSU_ALLOWED_KEYS, type KeyDef } from '../../lib/keyboardLayouts';
 
-export function KeyVisualizer({ borderless = false }: { borderless?: boolean } = {}) {
+interface KeyVisualizerProps {
+    borderless?: boolean;
+    fitContent?: boolean;
+}
+
+export function KeyVisualizer({ borderless = false, fitContent = false }: KeyVisualizerProps = {}) {
     const { i18n } = useTranslation();
     const activeKeys = useInputStore((s) => s.activeKeys);
     const layoutStyle = useSettingsStore((s) => s.settings?.keyboardLayout || 'full');
+    const showMouseButtons = useSettingsStore((s) => s.settings?.showMouseButtons ?? true);
+    const keyHighlightColor = useSettingsStore((s) => s.settings?.keyHighlightColor ?? '#6366f1');
 
     // Select layout based on current language, fallback to 'en'
     const layoutKey = i18n.language.split('-')[0]; // Handle language variants like 'en-US'
@@ -24,7 +31,7 @@ export function KeyVisualizer({ borderless = false }: { borderless?: boolean } =
         return true; // 'full'
     };
 
-    const filterRow = (row: any[]) => row.filter(k => isAllowed(k.code));
+    const filterRow = (row: KeyDef[]) => row.filter(k => isAllowed(k.code));
 
     const layout = {
         functionRow: filterRow(baseLayout.functionRow),
@@ -36,9 +43,9 @@ export function KeyVisualizer({ borderless = false }: { borderless?: boolean } =
     };
 
     return (
-        <div className={`w-full h-full p-3 flex items-center justify-center gap-6 overflow-hidden kf-panel ${borderless ? 'bg-transparent' : 'bg-[#1a1a1a] rounded-lg border border-[#333]'}`}>
+        <div className={`${fitContent ? 'inline-flex h-auto w-fit max-w-none overflow-visible' : 'flex h-full w-full overflow-hidden'} p-3 items-center justify-center gap-6 kf-panel ${borderless ? 'bg-transparent' : 'bg-[#1a1a1a] rounded-lg border border-[#333]'}`}>
             {/* Keyboard Layout */}
-            <div className="flex flex-col items-center justify-center gap-1.5">
+            <div className="flex shrink-0 flex-col items-center justify-center gap-1.5">
                 {/* Function Row */}
                 {layout.functionRow.length > 0 && (
                     <div className="flex gap-1.5 mb-2 w-full justify-center scale-90 origin-bottom">
@@ -53,6 +60,7 @@ export function KeyVisualizer({ borderless = false }: { borderless?: boolean } =
                                     brLabel={key.brLabel}
                                     isActive={isKeyActive(key.code)}
                                     width={key.width}
+                                    activeColor={keyHighlightColor}
                                 />
                                 {key.code === 'Escape' && <div className="w-4" />}
                             </React.Fragment>
@@ -74,6 +82,7 @@ export function KeyVisualizer({ borderless = false }: { borderless?: boolean } =
                                 brLabel={key.brLabel}
                                 isActive={isKeyActive(key.code)}
                                 width={key.width}
+                                activeColor={keyHighlightColor}
                             />
                         ))}
                     </div>
@@ -93,6 +102,7 @@ export function KeyVisualizer({ borderless = false }: { borderless?: boolean } =
                                 brLabel={key.brLabel}
                                 isActive={isKeyActive(key.code)}
                                 width={key.width}
+                                activeColor={keyHighlightColor}
                             />
                         ))}
                     </div>
@@ -112,6 +122,7 @@ export function KeyVisualizer({ borderless = false }: { borderless?: boolean } =
                                 brLabel={key.brLabel}
                                 isActive={isKeyActive(key.code)}
                                 width={key.width}
+                                activeColor={keyHighlightColor}
                             />
                         ))}
                     </div>
@@ -131,6 +142,7 @@ export function KeyVisualizer({ borderless = false }: { borderless?: boolean } =
                                 brLabel={key.brLabel}
                                 isActive={isKeyActive(key.code)}
                                 width={key.width}
+                                activeColor={keyHighlightColor}
                             />
                         ))}
                     </div>
@@ -150,6 +162,7 @@ export function KeyVisualizer({ borderless = false }: { borderless?: boolean } =
                                 brLabel={key.brLabel}
                                 isActive={isKeyActive(key.code)}
                                 width={key.width || 'w-12'}
+                                activeColor={keyHighlightColor}
                             />
                         ))}
                     </div>
@@ -157,9 +170,11 @@ export function KeyVisualizer({ borderless = false }: { borderless?: boolean } =
             </div>
 
             {/* Mouse Visualizer (Right side) */}
-            <div className="scale-90 origin-left">
-                <MouseVisualizer />
-            </div>
+            {showMouseButtons && (
+                <div className="shrink-0 scale-90 origin-left">
+                    <MouseVisualizer />
+                </div>
+            )}
         </div>
     );
 }

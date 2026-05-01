@@ -10,6 +10,7 @@ import type { GanttRow, GanttViewport, PatternEvent, GanttBar } from '../../type
 import { useInputStore } from '../../stores/inputStore';
 import { useViewportStore } from '../../stores/viewportStore';
 import { useComparisonStore } from '../../stores/comparisonStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 const ROW_HEIGHT = 28;
 const ROW_PADDING = 4;
@@ -28,6 +29,9 @@ interface Props {
 export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset, scrollY }: Props) {
     const { t } = useTranslation();
     const containerRef = useRef<HTMLDivElement>(null);
+    const ganttRowHeight = useSettingsStore((s) => s.settings?.ganttRowHeight ?? ROW_HEIGHT);
+    const ganttBarColor = useSettingsStore((s) => s.settings?.ganttBarColor ?? '#6366f1');
+    const patternBarColor = useSettingsStore((s) => s.settings?.patternBarColor ?? '#4b5563');
     const stageRef = useRef<Konva.Stage | null>(null);
     const barLayerRef = useRef<Konva.Layer | null>(null);
     const labelLayerRef = useRef<Konva.Layer | null>(null);
@@ -40,7 +44,6 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
     const isPopout = document.documentElement.hasAttribute('data-popout');
     const BG_RULER = isPopout ? 'rgba(15,15,15,0.55)' : '#0f0f0f';
     const BG_LABEL = isPopout ? 'rgba(26,26,26,0.55)' : '#1a1a1a';
-    const BG_STAGE = isPopout ? 'transparent' : '#1a1a1a';
 
     const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
 
@@ -54,8 +57,8 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
             width: clientWidth,
             height: clientHeight,
         });
-        // Make Konva's own canvas background transparent so Electron window transparency shows
-        (stage as any).content.style.background = 'transparent';
+        // Make Konva's own canvas background transparent so window transparency shows.
+        stage.container().style.background = 'transparent';
 
         // Native hardware clipping
         const rulerLayer = new Konva.Layer({
@@ -253,9 +256,6 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
             }
         }
 
-        // Draw Start/End Mocks
-        const endX = Math.min(LABEL_WIDTH + (viewport.endMs - viewport.startMs) * viewport.pixelsPerMs, stageW - 5);
-
         layer.add(new Konva.Text({
             x: LABEL_WIDTH + 4, y: RULER_HEIGHT - 12, text: format(viewport.startMs), fontSize: 10, fill: '#ef4444', fontStyle: 'bold'
         }));
@@ -284,7 +284,8 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
         }
 
         userRows.forEach((row, rowIdx) => {
-            const y = RULER_HEIGHT + rowIdx * ROW_HEIGHT - scrollY;
+            const y = RULER_HEIGHT + rowIdx * ganttRowHeight - scrollY;
+            const isMutedRow = row.presses.some((press) => press.isMuted);
 
             // Draw Row Background / Separator (on Label Layer to not overlap)
             const sep = new Konva.Line({
@@ -298,18 +299,18 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
             const labelBg = new Konva.Rect({
                 x: 0, y,
                 width: LABEL_WIDTH,
-                height: ROW_HEIGHT,
+                height: ganttRowHeight,
                 fill: BG_LABEL,
             });
             labelLayer.add(labelBg);
 
             // Draw Label Text
             const label = new Konva.Text({
-                x: 8, y: y + (ROW_HEIGHT / 2) - 5,
+                x: 8, y: y + (ganttRowHeight / 2) - 5,
                 text: row.displayLabel,
                 fontSize: 11,
                 fontFamily: 'Inter',
-                fill: '#f5f5f5',
+                fill: isMutedRow ? '#888888' : '#f5f5f5',
             });
             labelLayer.add(label);
 
@@ -319,13 +320,13 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
                 const duration = bar.duration !== undefined ? bar.duration : Math.max(0, bar.endTime - bar.startTime);
                 const w = Math.max(duration * viewport.pixelsPerMs, 4); // Min 4px width
                 const barY = y + ROW_PADDING;
-                const barH = ROW_HEIGHT - ROW_PADDING * 2;
+                const barH = ganttRowHeight - ROW_PADDING * 2;
 
                 const rect = new Konva.Rect({
                     x, y: barY, width: w, height: barH,
-                    fill: getBarColor(bar),
+                    fill: getBarColor(bar, ganttBarColor),
                     cornerRadius: BAR_RADIUS,
-                    opacity: bar.isActive ? 0.7 : 1,
+                    opacity: bar.isMuted ? (bar.isActive ? 0.55 : 0.42) : bar.isActive ? 0.7 : 1,
                     name: bar.isActive ? 'active-bar' : undefined,
                 });
 
@@ -388,7 +389,7 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
                         x: e.evt.clientX,
                         y: e.evt.clientY,
                         text: t('gantt.tooltip', {
-                            label: row.displayLabel,
+                            label: bar.sourceLabel ?? row.displayLabel,
                             time: (bar.startTime / 1000).toFixed(2),
                             duration: bar.duration
                         })
@@ -426,7 +427,7 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
         const activeRects = layer.find('.active-bar');
         let anim: Konva.Animation | null = null;
         if (activeRects.length > 0) {
-            anim = new Konva.Animation((frame) => {
+            anim = new Konva.Animation(() => {
                 const state = useInputStore.getState();
 
                 let currentMs: number;
@@ -473,7 +474,7 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
         return () => {
             if (anim) anim.stop();
         };
-    }, [userRows, viewport, playheadOffset, scrollY]);
+    }, [userRows, viewport, playheadOffset, scrollY, ganttRowHeight, ganttBarColor]);
 
     // 4. Render Pattern Overlay
     useEffect(() => {
@@ -484,7 +485,7 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
         patternEvents.forEach((pe, idx) => {
             // Find row index, or append below if key not pressed yet
             const rowIdx = userRows.findIndex((r) => r.key === pe.key);
-            const y = RULER_HEIGHT + (rowIdx >= 0 ? rowIdx : userRows.length + idx) * ROW_HEIGHT - scrollY;
+            const y = RULER_HEIGHT + (rowIdx >= 0 ? rowIdx : userRows.length + idx) * ganttRowHeight - scrollY;
 
             const x = LABEL_WIDTH + (pe.startTime - viewport.startMs) * viewport.pixelsPerMs;
             const w = Math.max(pe.duration * viewport.pixelsPerMs, 4);
@@ -495,9 +496,9 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
             const rect = new Konva.Rect({
                 x, y: y + ROW_PADDING,
                 width: w,
-                height: ROW_HEIGHT - ROW_PADDING * 2,
+                height: ganttRowHeight - ROW_PADDING * 2,
                 fill: isMissed ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-                stroke: isMissed ? '#ef4444' : '#4b5563', // Red or Gray outline
+                stroke: isMissed ? '#ef4444' : patternBarColor, // Red or configured pattern outline
                 strokeWidth: 1.5,
                 dash: isMissed ? [] : [4, 4],
                 cornerRadius: BAR_RADIUS,
@@ -507,7 +508,7 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
         });
 
         layer.batchDraw();
-    }, [patternEvents, userRows, viewport, scrollY]);
+    }, [patternEvents, userRows, viewport, scrollY, ganttRowHeight, patternBarColor]);
 
     // 5. Render Error Highlights
     const highlightedError = useComparisonStore(s => s.highlightedError);
@@ -594,11 +595,11 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
                 const rowIdx = userRows.findIndex((r) => r.key === pe.key);
                 // Should always be found now due to useGantt update
                 const actualRowIdx = rowIdx >= 0 ? rowIdx : userRows.length;
-                const y = RULER_HEIGHT + actualRowIdx * ROW_HEIGHT - scrollY;
+                const y = RULER_HEIGHT + actualRowIdx * ganttRowHeight - scrollY;
                 const x = LABEL_WIDTH + (start - viewport.startMs) * viewport.pixelsPerMs;
                 const w = Math.max((end - start) * viewport.pixelsPerMs, 4);
 
-                const barH = ROW_HEIGHT - ROW_PADDING * 2;
+                const barH = ganttRowHeight - ROW_PADDING * 2;
                 const barY = y + ROW_PADDING;
 
                 // 1. Solid highlight box that perfectly aligns with timeline row heights
@@ -634,7 +635,7 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
         });
 
         layer.batchDraw();
-    }, [highlightedError, latestResult, patternEvents, userRows, viewport, scrollY]);
+    }, [highlightedError, latestResult, patternEvents, userRows, viewport, scrollY, ganttRowHeight]);
 
     return (
         <div className="relative w-full h-full">
@@ -652,7 +653,8 @@ export function GanttCanvas({ userRows, patternEvents, viewport, playheadOffset,
 }
 
 /** Get color based on comparison status or active state. */
-function getBarColor(bar: GanttBar): string {
+function getBarColor(bar: GanttBar, defaultColor: string): string {
+    if (bar.isMuted) return '#737373';
     if (bar.isActive) return '#818cf8'; // Lighter indigo while held down
     switch (bar.matchStatus) {
         case 'matched': return '#22c55e'; // Green
@@ -660,6 +662,6 @@ function getBarColor(bar: GanttBar): string {
         case 'late': return '#fb923c'; // Orange
         case 'missed': return '#ef4444'; // Red (Only for pattern bars without match)
         case 'extra': return '#8b5cf6'; // Purple (User pressed key not in pattern)
-        default: return '#6366f1'; // Indigo (Default, no comparison yet)
+        default: return defaultColor; // Configured default, no comparison yet
     }
 }

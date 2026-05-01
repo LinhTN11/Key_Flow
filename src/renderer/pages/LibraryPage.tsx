@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
-import { v4 as uuid } from 'uuid';
 import { usePatternStore } from '../stores/patternStore';
 import { useComparisonStore } from '../stores/comparisonStore';
 import { PatternEditor } from '../components/pattern/PatternEditor';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
-import type { Pattern } from '../types';
+import { createPatternPack, parsePatternImportFile } from '../lib/patternImport';
+import { isTauriRuntime } from '../lib/runtime';
+import * as db from '../services/db';
+import type { Pattern, PatternStats } from '../types';
 
 export function LibraryPage() {
     const { t } = useTranslation();
@@ -37,6 +39,7 @@ export function LibraryPage() {
     const [patternToDelete, setPatternToDelete] = React.useState<string | null>(null);
     const [showToast, setShowToast] = useState(false);
     const [toastMsg, setToastMsg] = useState('');
+    const [patternStats, setPatternStats] = useState<Record<string, PatternStats>>({});
 
     useEffect(() => {
         if (!showToast) return;
@@ -47,6 +50,30 @@ export function LibraryPage() {
     useEffect(() => {
         loadAll();
     }, [loadAll]);
+
+    useEffect(() => {
+        let disposed = false;
+
+        async function loadStats() {
+            if (!isTauriRuntime()) {
+                setPatternStats({});
+                return;
+            }
+
+            try {
+                const stats = await db.getPatternStats();
+                if (!disposed) setPatternStats(stats);
+            } catch (error) {
+                console.error('[LibraryPage] Failed to load pattern stats:', error);
+                if (!disposed) setPatternStats({});
+            }
+        }
+
+        void loadStats();
+        return () => {
+            disposed = true;
+        };
+    }, [patterns.length]);
 
     const filteredPatterns = patterns.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -64,26 +91,40 @@ export function LibraryPage() {
         URL.revokeObjectURL(url);
     };
 
+    const handleExportPack = () => {
+        if (markedPatterns.length === 0) return;
+        const pack = createPatternPack(markedPatterns);
+        const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `keyflow_pack_${markedPatterns.length}_combos.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
         const text = await file.text();
         try {
-            const data = JSON.parse(text);
-            if (!data.name || !data.events) throw new Error('Invalid format');
-            // Remove ID to let DB generate a new one
-            const { id, createdAt, updatedAt, ...cleanData } = data;
-            await usePatternStore.getState().createPattern(cleanData);
+            const importedPatterns = parsePatternImportFile(text);
+            for (const pattern of importedPatterns) {
+                await usePatternStore.getState().createPattern(pattern);
+            }
             e.target.value = '';
-        } catch (err: any) {
-            setAlertMessage(t('library.import_failed') + ': ' + err.message);
+            setToastMsg(t('library.import_success', { count: importedPatterns.length }));
+            setShowToast(true);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            setAlertMessage(t('library.import_failed') + ': ' + message);
             setIsAlertOpen(true);
         }
     };
 
     const blankPattern: Pattern = {
         id: '__new__',
-        name: t('library.new_combo') || 'New Combo',
+        name: t('library.new_combo'),
         game: '',
         character: '',
         description: '',
@@ -111,18 +152,20 @@ export function LibraryPage() {
     const handleConfirmNewSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!pendingNewPattern || !newName) return;
-        const { id, createdAt, updatedAt, ...data } = pendingNewPattern;
         await usePatternStore.getState().createPattern({
-            ...data,
             name: newName,
             game: newGame,
             character: newCharacter,
+            description: pendingNewPattern.description,
+            tags: pendingNewPattern.tags,
+            totalDuration: pendingNewPattern.totalDuration,
+            events: pendingNewPattern.events,
         });
         setPendingNewPattern(null);
         setNewName('');
         setNewGame('');
         setNewCharacter('');
-        setToastMsg(t('library.save_success') || 'Combo saved!');
+        setToastMsg(t('library.save_success'));
         setShowToast(true);
     };
 
@@ -146,12 +189,20 @@ export function LibraryPage() {
                 </div>
                 <div className="flex items-center gap-4">
                     {isMultiSelectMode && markedPatterns.length > 0 && (
-                        <button
-                            onClick={clearMarkedPatterns}
-                            className="px-4 py-3 rounded-full font-bold text-xs uppercase tracking-tight transition-all border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white"
-                        >
-                            {t('library.clear_all')}
-                        </button>
+                        <>
+                            <button
+                                onClick={handleExportPack}
+                                className="px-4 py-3 rounded-full font-bold text-xs uppercase tracking-tight transition-all border border-[#6366f1]/40 text-[#818cf8] hover:bg-[#6366f1] hover:text-white"
+                            >
+                                {t('library.export_pack')}
+                            </button>
+                            <button
+                                onClick={clearMarkedPatterns}
+                                className="px-4 py-3 rounded-full font-bold text-xs uppercase tracking-tight transition-all border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white"
+                            >
+                                {t('library.clear_all')}
+                            </button>
+                        </>
                     )}
                     <button
                         onClick={() => setMultiSelectMode(!isMultiSelectMode)}
@@ -167,7 +218,7 @@ export function LibraryPage() {
                         className="bg-[#6366f1] hover:bg-[#818cf8] text-white font-bold px-6 py-3 rounded-full cursor-pointer transition-all text-sm uppercase tracking-tight shadow-lg shadow-[#6366f1]/20 active:scale-95 flex items-center gap-2"
                     >
                         <span className="text-lg leading-none">+</span>
-                        {t('library.create_new') || 'Create New'}
+                        {t('library.create_new')}
                     </button>
                     <label className="bg-[#1a1a1a] border border-[#333] hover:border-[#666] text-[#f5f5f5] font-bold px-6 py-3 rounded-full cursor-pointer transition-all text-sm uppercase tracking-tight">
                         {t('common.import')}
@@ -194,7 +245,7 @@ export function LibraryPage() {
                     </div>
                     <input
                         type="text"
-                        placeholder={t('library.search_placeholder') || "Search by name, game, or character..."}
+                        placeholder={t('library.search_placeholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl py-3 pl-12 pr-4 text-sm text-white placeholder-[#666] focus:outline-none focus:border-[#6366f1] transition-all"
@@ -260,21 +311,21 @@ export function LibraryPage() {
                     >
                         <div className="absolute top-[-10%] right-[-10%] w-32 h-32 bg-[#6366f1] blur-[64px] opacity-10 pointer-events-none" />
 
-                        <h2 className="text-2xl font-black mb-2 tracking-tighter text-white uppercase">{t('practice.save_new_combo') || 'Save New Combo'}</h2>
-                        <p className="text-xs text-[#666] mb-8">{pendingNewPattern.events.length} {t('library.events_short') || 'events'} • {((pendingNewPattern.totalDuration || 0) / 1000).toFixed(2)}s</p>
+                        <h2 className="text-2xl font-black mb-2 tracking-tighter text-white uppercase">{t('practice.save_new_combo')}</h2>
+                        <p className="text-xs text-[#666] mb-8">{pendingNewPattern.events.length} {t('library.events_short')} - {((pendingNewPattern.totalDuration || 0) / 1000).toFixed(2)}s</p>
 
                         <div className="space-y-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-[#666] uppercase tracking-[0.2em]">{t('practice.combo_name') || 'Combo Name'}</label>
-                                <input autoFocus required value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g., Hu Tao N1CJP" className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
+                                <label className="text-[10px] font-black text-[#666] uppercase tracking-[0.2em]">{t('practice.combo_name')}</label>
+                                <input autoFocus required value={newName} onChange={e => setNewName(e.target.value)} placeholder={t('practice.combo_name_placeholder')} className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-[#666] uppercase tracking-[0.2em]">Game</label>
-                                <input value={newGame} onChange={e => setNewGame(e.target.value)} placeholder="e.g., Genshin Impact" className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
+                                <label className="text-[10px] font-black text-[#666] uppercase tracking-[0.2em]">{t('practice.game')}</label>
+                                <input value={newGame} onChange={e => setNewGame(e.target.value)} placeholder={t('practice.game_placeholder')} className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-[#666] uppercase tracking-[0.2em]">{t('practice.character') || 'Character'}</label>
-                                <input value={newCharacter} onChange={e => setNewCharacter(e.target.value)} placeholder="e.g., Hu Tao" className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
+                                <label className="text-[10px] font-black text-[#666] uppercase tracking-[0.2em]">{t('practice.character')}</label>
+                                <input value={newCharacter} onChange={e => setNewCharacter(e.target.value)} placeholder={t('practice.character_placeholder')} className="w-full px-4 py-3 rounded-xl bg-[#222] text-white border border-[#333] focus:outline-none focus:border-[#6366f1] transition-all" />
                             </div>
                         </div>
 
@@ -288,20 +339,20 @@ export function LibraryPage() {
                                 }`}
                                 disabled={pendingNewPattern.events.length === 0}
                             >
-                                {pendingNewPattern.events.length === 0 ? (t('practice.no_keys_recorded') || 'No events added') : (t('practice.save_now') || 'Save Now')}
+                                {pendingNewPattern.events.length === 0 ? t('practice.no_keys_recorded') : t('practice.save_now')}
                             </button>
                             <button
                                 type="button"
                                 onClick={handleCancelNewSave}
                                 className="bg-[#333] text-[#a3a3a3] font-black px-6 py-4 rounded-2xl hover:bg-[#444] transition-all text-xs uppercase"
                             >
-                                {t('practice.cancel') || 'Cancel'}
+                                {t('practice.cancel')}
                             </button>
                         </div>
 
                         {pendingNewPattern.events.length === 0 && (
                             <p className="mt-4 text-center text-red-500 text-[10px] font-bold uppercase tracking-widest animate-pulse">
-                                {t('library.add_events_hint') || 'Add events in the editor before saving'}
+                                {t('library.add_events_hint')}
                             </p>
                         )}
                     </form>
@@ -330,6 +381,7 @@ export function LibraryPage() {
                     {filteredPatterns.map((p) => {
                         const isActive = activePattern?.id === p.id;
                         const isMarked = markedPatterns.some(m => m.id === p.id);
+                        const stats = patternStats[p.id];
                         return (
                             <div
                                 key={p.id}
@@ -365,6 +417,12 @@ export function LibraryPage() {
                                 <h3 className="text-[#f5f5f5] font-bold text-xl mb-1 leading-none tracking-tight">{p.name}</h3>
                                 <p className="text-[#666] text-xs font-medium uppercase mb-4 tracking-wide">{p.character}</p>
 
+                                <div className="grid grid-cols-3 gap-2 mb-4">
+                                    <PatternStat label={t('library.attempts')} value={stats?.attemptCount ?? 0} />
+                                    <PatternStat label={t('library.best_score')} value={stats?.bestScore ?? '-'} />
+                                    <PatternStat label={t('library.avg_score')} value={stats?.averageScore ?? '-'} />
+                                </div>
+
                                 <div className="flex items-center gap-3 mt-auto pt-4 border-t border-white/[0.03]">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setEditingPattern(p); }}
@@ -394,6 +452,15 @@ export function LibraryPage() {
                     })}
                 </div>
             )}
+        </div>
+    );
+}
+
+function PatternStat({ label, value }: { label: string; value: string | number }) {
+    return (
+        <div className="rounded-lg border border-white/[0.04] bg-white/[0.02] px-2 py-2 min-w-0">
+            <p className="text-[8px] text-[#555] font-black uppercase tracking-widest truncate">{label}</p>
+            <p className="text-sm text-white font-black leading-tight mt-0.5">{value}</p>
         </div>
     );
 }

@@ -1,7 +1,13 @@
 {
   "name": "keyflow",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Desktop app to help gamers practice combos",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LinhTN11/Key_Flow.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,11 +18,11 @@
     "build:tauri": "tauri build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts,.tsx"
+    "lint": "eslint . --ext .ts,.tsx",
+    "verify:release": "node scripts/verify-release-metadata.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
-    "@tauri-apps/plugin-dialog": "^2.7.0",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-sql": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.10.1",
@@ -28,7 +34,7 @@
     "react-i18next": "^17.0.4",
     "react-konva": "^18.2.10",
     "tailwind-merge": "^2.2.0",
-    "uuid": "^9.0.0",
+    "uuid": "^14.0.0",
     "zustand": "^4.4.0"
   },
   "devDependencies": {
@@ -36,12 +42,16 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/uuid": "^9.0.0",
-    "@vitejs/plugin-react": "^4.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.1",
+    "@typescript-eslint/parser": "^8.59.1",
+    "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.5",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.0",
-    "vite": "^5.0.0",
-    "vitest": "^1.2.0"
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
   }
 }

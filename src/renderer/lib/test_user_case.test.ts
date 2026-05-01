@@ -1,9 +1,19 @@
 import { expect, test } from 'vitest';
 import * as fs from 'fs';
-import * as path from 'path';
 import { buildMatchResults, calculateScore } from './scoring';
 import { analyzeErrors } from './errorAnalysis';
 import type { Pattern, Attempt } from '../types';
+
+interface AttemptFixture {
+    totalDuration: number;
+    events: Array<{
+        id: string;
+        key: string;
+        startTime: number;
+        endTime: number;
+        duration: number;
+    }>;
+}
 
 test('Test User Real Data against New Algorithm', () => {
     // Read the JSON files provided by the user
@@ -15,7 +25,7 @@ test('Test User Real Data against New Algorithm', () => {
     if (!fs.existsSync(attemptPath)) throw new Error('Attempt file missing');
 
     const pattern = JSON.parse(fs.readFileSync(patternPath, 'utf-8')) as Pattern;
-    const testJson = JSON.parse(fs.readFileSync(attemptPath, 'utf-8'));
+    const testJson = JSON.parse(fs.readFileSync(attemptPath, 'utf-8')) as AttemptFixture;
 
     // Map the testJson.events into an Attempt.presses format
     const attempt: Attempt = {
@@ -24,7 +34,7 @@ test('Test User Real Data against New Algorithm', () => {
         patternId: pattern.id,
         startTime: 0,
         endTime: testJson.totalDuration,
-        presses: testJson.events.map((e: any) => ({
+        presses: testJson.events.map((e) => ({
             id: e.id,
             key: e.key,
             keyCode: 0,

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { ComparisonResult } from '../../types';
 
 interface Props { result: ComparisonResult; }
+type Rank = ReturnType<typeof getRank>;
 
 export function ScoreDisplay({ result }: Props) {
     const { t } = useTranslation();
@@ -54,7 +55,7 @@ function SubScore({ label, value, color }: { label: string; value: number; color
     );
 }
 
-function ScoreRing({ score, rank, size }: { score: number; rank: any; size: number }) {
+function ScoreRing({ score, rank, size }: { score: number; rank: Rank; size: number }) {
     const strokeWidth = 8;
     const r = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * r;

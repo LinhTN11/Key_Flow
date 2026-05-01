@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "keyflow",
-  "version": "0.1.1",
-  "identifier": "com.keyflow.app",
+  "productName": "KeyFlow",
+  "version": "1.0.1",
+  "identifier": "com.keyflow.desktop",
   "build": {
     "frontendDist": "../out/renderer",
     "devUrl": "http://127.0.0.1:5173",
@@ -23,7 +23,8 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'",
+      "devCsp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*"
     }
   },
   "plugins": {

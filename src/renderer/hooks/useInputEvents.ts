@@ -7,8 +7,8 @@
 import { useEffect } from 'react';
 import { useInputStore } from '../stores/inputStore';
 import { v4 as uuid } from 'uuid';
-
-const isTauri = !!(window as any).__TAURI_INTERNALS__;
+import { getRuntimeWindow, isTauriRuntime } from '../lib/runtime';
+import type { InputEventType, RawInputEvent } from '../types';
 
 
 interface KeyInputPayload {
@@ -62,12 +62,12 @@ function mouseButtonToKey(button: number): string {
     }
 }
 
-function createInputEvent(key: string, type: string) {
+function createInputEvent(key: string, type: InputEventType): RawInputEvent {
     const state = useInputStore.getState();
     const absoluteTime = performance.timeOrigin + performance.now();
     return {
         id: uuid(),
-        type: type as any,
+        type,
         key,
         keyCode: 0,
         timestamp: absoluteTime - state.sessionBaseTime,
@@ -98,8 +98,19 @@ export function useInputEvents(): void {
 
         // 2. Tauri IPC Listener (Global native events from Rust rdev)
         let unlistenTauri: (() => void) | undefined;
+        let unlistenKeysSync: (() => void) | undefined;
+        let releaseNativeCapture: (() => void) | undefined;
+        let disposed = false;
 
-        if (isTauri) {
+        if (isTauriRuntime()) {
+            import('@tauri-apps/api/core').then(({ invoke }) => {
+                if (disposed) return;
+                void invoke('input_capture_acquire');
+                releaseNativeCapture = () => {
+                    void invoke('input_capture_release');
+                };
+            });
+
             import('@tauri-apps/api/event').then(({ listen }) => {
                 listen<KeyInputPayload>('global-input', (event) => {
                     const { key_name, event_type } = event.payload;
@@ -114,15 +125,21 @@ export function useInputEvents(): void {
 
                     handleRawEvents([createInputEvent(mappedKey, event_type)]);
                 }).then((fn) => {
-                    unlistenTauri = fn;
+                    if (disposed) fn();
+                    else unlistenTauri = fn;
                 });
 
                 listen<{ active_keys: string[] }>('keys-sync', (event) => {
+                    // CRITICAL FIX: On Windows, rdev cannot hook keyboard events if our own window is focused.
+                    // This causes rustKeys to be empty for keys handled via DOM. If we process the sync here,
+                    // we will incorrectly delete keys the user is currently holding down, causing flickering and missed keyups.
+                    if (document.hasFocus()) return;
+
                     const state = useInputStore.getState();
                     const rustKeys = new Set(event.payload.active_keys.map(normalizeRustKey));
                     const localKeys = state.activeKeys;
                     const staleKeys: string[] = [];
-                    
+
                     for (const key of localKeys.keys()) {
                         if (!rustKeys.has(key)) staleKeys.push(key);
                     }
@@ -132,6 +149,9 @@ export function useInputEvents(): void {
                         for (const key of staleKeys) newActiveKeys.delete(key);
                         useInputStore.setState({ activeKeys: newActiveKeys });
                     }
+                }).then((fn) => {
+                    if (disposed) fn();
+                    else unlistenKeysSync = fn;
                 });
             });
 
@@ -194,7 +214,7 @@ export function useInputEvents(): void {
             window.addEventListener('mouseup', onDomMouseUp);
 
             // Store cleanup refs
-            (window as any).__kfDomCleanup = () => {
+            getRuntimeWindow().__kfDomCleanup = () => {
                 window.removeEventListener('keydown', onDomKeyDown);
                 window.removeEventListener('keyup', onDomKeyUp);
                 window.removeEventListener('mousedown', onDomMouseDown);
@@ -209,9 +229,14 @@ export function useInputEvents(): void {
         window.addEventListener('contextmenu', onContextMenu);
 
         return () => {
+            disposed = true;
             if (unlistenTauri) unlistenTauri();
-            if ((window as any).__kfDomCleanup) (window as any).__kfDomCleanup();
+            if (unlistenKeysSync) unlistenKeysSync();
+            releaseNativeCapture?.();
+            getRuntimeWindow().__kfDomCleanup?.();
+            getRuntimeWindow().__kfDomCleanup = undefined;
             window.removeEventListener('mousedown', handleUIInteraction, true);
+            window.removeEventListener('mouseup', handleUIInteraction, true);
             window.removeEventListener('keydown', handleUIInteraction, true);
             window.removeEventListener('contextmenu', onContextMenu);
         };
