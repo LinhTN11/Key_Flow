@@ -4,7 +4,7 @@
   "pub_date": "2026-05-01T05:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "untrusted comment: signature from tauri secret key\nUlVUNG5mNUV3cDlheExucWVjdUlNQ2d5YzUwakhtTmN4ckFTZlRXU0JpdVdzVGQxQ0drQVluWklWcU9KbU9CYVlRZVBURFBWZDNDSUtHME92Z2EwL0k0VVJhc1JlQU5pREFzPQ\ntrusted comment: timestamp:1777610398\tfile:KeyFlow_1.0.1_x64_en-US.msi\nS28zd3ZEVk9KODhHUTJWaTFpRkQ4YTRhK1MzZk03MUtyVjE0M1N2dW5XV3ZCQTRVUnhVVk96dFU4UHdpd1VJdU9oNDRlTzltYkxZUDVkVExrMTdnc0NnPT0K",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKVWxWVU5HNW1OVVYzY0RsaGVFeHVjV1ZqZFVsTlEyZDVZelV3YWtodFRtTjRja0ZUWmxSWFUwSnBkVmR6VkdReFEwZHJRVmx1V2tsV2NVOUtiVTlDWVZsUlpWQlVSRkJXWkRORFNVdEhNRTkyWjJFd0wwazBWVkpoYzFKbFFVNXBSRUZ6UFEKdHJ1c3RlZCBjb21tZW50OiB0aW1lc3RhbXA6MTc3NzYxMDM5OAlmaWxlOktleUZsb3dfMS4wLjFfeDY0X2VuLVVTLm1zaQpTMjh6ZDNaRVZrOUtPRGhIVVRKV2FURnBSa1E0WVRSaEsxTXpaazAzTVV0eVZqRTBNMU4yZFc1WFYzWkNRVFJWVW5oVlZrOTZkRlU0VUhkcGQxVkpkVTlvTkRSbFR6bHRZa3haVURWa1ZFeHJNVGRuYzBOblBUMEs=",
       "url": "https://github.com/LinhTN11/Key_Flow/releases/download/v1.0.1/KeyFlow_1.0.1_x64_en-US.msi"
     }
   }

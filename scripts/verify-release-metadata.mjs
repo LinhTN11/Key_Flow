@@ -16,6 +16,18 @@ function fail(message) {
   process.exitCode = 1;
 }
 
+function decodeStrictBase64(value) {
+  if (typeof value !== 'string' || value.trim() !== value || value.length === 0) {
+    return null;
+  }
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length % 4 !== 0) {
+    return null;
+  }
+
+  const decoded = Buffer.from(value, 'base64');
+  return decoded.toString('base64') === value ? decoded.toString('utf8') : null;
+}
+
 const packageJson = readJson('package.json');
 const tauriConfig = readJson('src-tauri/tauri.conf.json');
 const cargoToml = readText('src-tauri/Cargo.toml');
@@ -59,6 +71,13 @@ if (updateManifest) {
     }
     if (typeof windows.signature !== 'string' || windows.signature.trim().length === 0) {
       fail('update.json windows signature is missing');
+    } else {
+      const decodedSignature = decodeStrictBase64(windows.signature);
+      if (!decodedSignature) {
+        fail('update.json windows signature must be base64-encoded .sig contents');
+      } else if (!decodedSignature.includes('signature from tauri secret key')) {
+        fail('update.json windows signature does not look like a Tauri updater signature');
+      }
     }
   }
   if (Number.isNaN(Date.parse(updateManifest.pub_date))) {
