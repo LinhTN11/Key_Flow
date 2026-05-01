@@ -1,11 +1,11 @@
 {
-  "version": "1.0.0",
-  "notes": "Release v1.0.0: Bug fixes and performance improvements.",
-  "pub_date": "2026-05-01T06:21:01.003Z",
+  "version": "1.0.1",
+  "notes": "Release v1.0.1: Fix chart popout viewport and zoom resets.",
+  "pub_date": "2026-05-01T08:14:51.756Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUNG5mNUV3cDlheFBUa0pNVisxRy9HUjZwd3YvajN3c3RhNWlqcGhRUFR4Rmg1VWVPY0N1TllSUG95STlkdm80VldrRnRZMDZtL1BXcDJkckpCVmRTUGlHbXIzNXBwNWdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc3NjE2NDE4CWZpbGU6a2V5Zmxvd18xLjAuMF94NjRfZW4tVVMubXNpCjB0dWhjaXpiUVNjSjRxdmdGL1lHWDkydEhpOUFJRlExWHplZlI1UVp3Q25mOGxYckE3VVVOZkZwZzFyRmNiM3V4T20yblF2bHkwN2tkYlVQdThQWERnPT0K",
-      "url": "https://github.com/LinhTN11/Key_Flow/releases/download/v1.0.0/keyflow_1.0.0_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUNG5mNUV3cDlheEhSeWNHNWpoMmFnR2ZabWlhTXhueGY3ZzVVZEFvZk9tNWRZZDhHRzljZ0dJdGpWZ2xVb3dva1hOWVp0SmV3ZWg2Z3dieXZIS3FXdWlEU3U1WXdieWd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc3NjIzMjg2CWZpbGU6a2V5Zmxvd18xLjAuMV94NjRfZW4tVVMubXNpCkVvOXdHVSsvTml4NXBCNG44MzUzWUltMGtZNThyRkxlMmVuajBIUEJSVXRTZWNlMm5LRkg1ZkhRMEZSSEUrZkN0VUp4dUhOdFRtNVdvdmQzMTVNWkJRPT0K",
+      "url": "https://github.com/LinhTN11/Key_Flow/releases/download/v1.0.1/keyflow_1.0.1_x64_en-US.msi"
     }
   }
 }

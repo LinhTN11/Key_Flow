@@ -51,6 +51,10 @@ interface SettingsPayload {
 
 type BridgePayload = StateSnapshot | SettingsPayload;
 
+interface ApplySnapshotOptions {
+    preserveViewport?: boolean;
+}
+
 function buildSnapshot(): StateSnapshot {
     const input = useInputStore.getState();
     const comparison = useComparisonStore.getState();
@@ -96,11 +100,22 @@ async function applySettings(settings: AppSettings) {
     useSettingsStore.setState({ settings });
 }
 
-function isSettingsPayload(payload: BridgePayload): payload is SettingsPayload {
+export function isSettingsPayload(payload: BridgePayload): payload is SettingsPayload {
     return 'type' in payload && payload.type === 'settings';
 }
 
-async function applySnapshot(snapshot: StateSnapshot) {
+function shouldApplySnapshotViewport(snapshot: StateSnapshot, options?: ApplySnapshotOptions) {
+    if (!options?.preserveViewport) return true;
+
+    const isResetSnapshot = snapshot.input.presses.length === 0 && snapshot.viewport.startMs === 0;
+    return isResetSnapshot;
+}
+
+export function isChartPopoutHash(hash: string) {
+    return /^#\/popout\/chart$/.test(hash);
+}
+
+async function applySnapshot(snapshot: StateSnapshot, options?: ApplySnapshotOptions) {
     // Patch inputStore
     useInputStore.setState({
         sessionId: snapshot.input.sessionId,
@@ -131,28 +146,32 @@ async function applySnapshot(snapshot: StateSnapshot) {
 
     // Patch viewportStore
     const isRecording = snapshot.input.status === 'recording';
+    const applyViewport = !isRecording && shouldApplySnapshotViewport(snapshot, options);
     useViewportStore.setState((prev) => ({
-        viewport: isRecording
-            ? prev.viewport  
-            : {
+        viewport: applyViewport
+            ? {
                 ...prev.viewport,
                 startMs: snapshot.viewport.startMs,
                 endMs: snapshot.viewport.endMs,
+            }
+            : {
+                ...prev.viewport,
             },
         playheadOffset: snapshot.viewport.playheadOffset,
     }));
 }
 
-async function applyBridgePayload(payload: BridgePayload) {
+async function applyBridgePayload(payload: BridgePayload, options?: ApplySnapshotOptions) {
     if (isSettingsPayload(payload)) {
         await applySettings(payload.data);
         return;
     }
-    await applySnapshot(payload);
+    await applySnapshot(payload, options);
 }
 
 export function useStoreBridge({ mode }: StoreBridgeOptions) {
     const broadcastRef = useRef<(() => void) | null>(null);
+    const hasAppliedInitialViewportRef = useRef(false);
 
     useEffect(() => {
         if (mode === 'broadcast') {
@@ -219,7 +238,11 @@ export function useStoreBridge({ mode }: StoreBridgeOptions) {
                 import('@tauri-apps/api/event').then(({ listen, emit }) => {
                     listen<BridgePayload>('state-sync', (event) => {
                         try {
-                            void applyBridgePayload(event.payload);
+                            const preserveViewport = isChartPopoutHash(window.location.hash) && hasAppliedInitialViewportRef.current;
+                            void applyBridgePayload(event.payload, { preserveViewport });
+                            if (!isSettingsPayload(event.payload)) {
+                                hasAppliedInitialViewportRef.current = true;
+                            }
                         } catch (e) {
                             console.warn('[StoreBridge] Failed to apply Tauri snapshot:', e);
                         }
@@ -239,7 +262,12 @@ export function useStoreBridge({ mode }: StoreBridgeOptions) {
             } else {
                 const cleanup = getElectronAPI()?.window?.onStateSync?.((raw) => {
                     try {
-                        void applyBridgePayload(raw as BridgePayload);
+                        const payload = raw as BridgePayload;
+                        const preserveViewport = isChartPopoutHash(window.location.hash) && hasAppliedInitialViewportRef.current;
+                        void applyBridgePayload(payload, { preserveViewport });
+                        if (!isSettingsPayload(payload)) {
+                            hasAppliedInitialViewportRef.current = true;
+                        }
                     } catch (e) {
                         console.warn('[StoreBridge] Failed to apply snapshot:', e);
                     }

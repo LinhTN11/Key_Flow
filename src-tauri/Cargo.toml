@@ -1,6 +1,6 @@
 [package]
 name = "keyflow"
-version = "1.0.0"
+version = "1.0.1"
 description = "Desktop app to help gamers practice combos"
 authors = ["KeyFlow contributors"]
 license = "MIT"
