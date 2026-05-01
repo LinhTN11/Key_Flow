@@ -1,4 +1,5 @@
 import React from 'react';
+import { getVersion } from '@tauri-apps/api/app';
 import { useTranslation } from 'react-i18next';
 import { useComparisonStore } from '../../stores/comparisonStore';
 
@@ -51,6 +52,7 @@ export function Sidebar({ currentPage, onNavigate }: {
     onNavigate: (page: Page) => void;
 }) {
     const { t } = useTranslation();
+    const [appVersion, setAppVersion] = React.useState('1.0.0');
     const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
     const dropdownRef = React.useRef<HTMLDivElement>(null);
     const activePattern = useComparisonStore((s) => s.activePattern);
@@ -64,6 +66,12 @@ export function Sidebar({ currentPage, onNavigate }: {
         { id: 'history', label: t('nav.history'), icon: <HistoryIcon /> },
         { id: 'settings', label: t('nav.settings'), icon: <SettingsIcon /> },
     ] as const;
+
+    React.useEffect(() => {
+        void getVersion()
+            .then(setAppVersion)
+            .catch(() => undefined);
+    }, []);
 
     React.useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -177,7 +185,7 @@ export function Sidebar({ currentPage, onNavigate }: {
 
             <div className="p-4 border-t border-[#333] mt-auto">
                 <p className="text-[10px] text-center text-[#444] font-bold uppercase tracking-widest">
-                    v1.0.0
+                    v{appVersion}
                 </p>
             </div>
         </aside>

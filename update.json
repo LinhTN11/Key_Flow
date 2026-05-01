@@ -1,11 +1,11 @@
 {
-  "version": "1.0.1",
-  "notes": "Release v1.0.1: Bug fixes and performance improvements.",
-  "pub_date": "2026-05-01T05:00:00Z",
+  "version": "1.0.0",
+  "notes": "Release v1.0.0: Bug fixes and performance improvements.",
+  "pub_date": "2026-05-01T06:21:01.003Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKVWxWVU5HNW1OVVYzY0RsaGVFeHVjV1ZqZFVsTlEyZDVZelV3YWtodFRtTjRja0ZUWmxSWFUwSnBkVmR6VkdReFEwZHJRVmx1V2tsV2NVOUtiVTlDWVZsUlpWQlVSRkJXWkRORFNVdEhNRTkyWjJFd0wwazBWVkpoYzFKbFFVNXBSRUZ6UFEKdHJ1c3RlZCBjb21tZW50OiB0aW1lc3RhbXA6MTc3NzYxMDM5OAlmaWxlOktleUZsb3dfMS4wLjFfeDY0X2VuLVVTLm1zaQpTMjh6ZDNaRVZrOUtPRGhIVVRKV2FURnBSa1E0WVRSaEsxTXpaazAzTVV0eVZqRTBNMU4yZFc1WFYzWkNRVFJWVW5oVlZrOTZkRlU0VUhkcGQxVkpkVTlvTkRSbFR6bHRZa3haVURWa1ZFeHJNVGRuYzBOblBUMEs=",
-      "url": "https://github.com/LinhTN11/Key_Flow/releases/download/v1.0.1/KeyFlow_1.0.1_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUNG5mNUV3cDlheFBUa0pNVisxRy9HUjZwd3YvajN3c3RhNWlqcGhRUFR4Rmg1VWVPY0N1TllSUG95STlkdm80VldrRnRZMDZtL1BXcDJkckpCVmRTUGlHbXIzNXBwNWdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc3NjE2NDE4CWZpbGU6a2V5Zmxvd18xLjAuMF94NjRfZW4tVVMubXNpCjB0dWhjaXpiUVNjSjRxdmdGL1lHWDkydEhpOUFJRlExWHplZlI1UVp3Q25mOGxYckE3VVVOZkZwZzFyRmNiM3V4T20yblF2bHkwN2tkYlVQdThQWERnPT0K",
+      "url": "https://github.com/LinhTN11/Key_Flow/releases/download/v1.0.0/keyflow_1.0.0_x64_en-US.msi"
     }
   }
 }

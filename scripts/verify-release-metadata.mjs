@@ -28,6 +28,39 @@ function decodeStrictBase64(value) {
   return decoded.toString('base64') === value ? decoded.toString('utf8') : null;
 }
 
+function decodeMinisignBase64(value) {
+  try {
+    return Buffer.from(value, 'base64');
+  } catch {
+    return null;
+  }
+}
+
+function validateTauriSignature(signatureText) {
+  const lines = signatureText.trimEnd().split(/\r?\n/);
+  if (lines.length !== 4) {
+    return 'must contain exactly 4 minisign lines';
+  }
+  if (!lines[0].startsWith('untrusted comment: ')) {
+    return 'is missing the untrusted comment line';
+  }
+  if (!lines[2].startsWith('trusted comment: ')) {
+    return 'is missing the trusted comment line';
+  }
+
+  const signatureBytes = decodeMinisignBase64(lines[1]);
+  if (!signatureBytes || signatureBytes.length !== 74) {
+    return 'has an invalid minisign signature payload';
+  }
+
+  const globalSignatureBytes = decodeMinisignBase64(lines[3]);
+  if (!globalSignatureBytes || globalSignatureBytes.length !== 64) {
+    return 'has an invalid minisign trusted-comment signature';
+  }
+
+  return null;
+}
+
 const packageJson = readJson('package.json');
 const tauriConfig = readJson('src-tauri/tauri.conf.json');
 const cargoToml = readText('src-tauri/Cargo.toml');
@@ -75,8 +108,11 @@ if (updateManifest) {
       const decodedSignature = decodeStrictBase64(windows.signature);
       if (!decodedSignature) {
         fail('update.json windows signature must be base64-encoded .sig contents');
-      } else if (!decodedSignature.includes('signature from tauri secret key')) {
-        fail('update.json windows signature does not look like a Tauri updater signature');
+      } else {
+        const signatureError = validateTauriSignature(decodedSignature);
+        if (signatureError) {
+          fail(`update.json windows signature ${signatureError}`);
+        }
       }
     }
   }

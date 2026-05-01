@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "KeyFlow",
-  "version": "1.0.1",
-  "identifier": "com.keyflow.desktop",
+  "productName": "keyflow",
+  "version": "1.0.0",
+  "identifier": "com.keyflow.app",
   "build": {
     "frontendDist": "../out/renderer",
     "devUrl": "http://127.0.0.1:5173",

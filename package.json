@@ -1,6 +1,6 @@
 {
   "name": "keyflow",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "Desktop app to help gamers practice combos",
   "private": true,
   "license": "MIT",
@@ -19,7 +19,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
-    "verify:release": "node scripts/verify-release-metadata.mjs"
+    "verify:release": "node scripts/verify-release-metadata.mjs",
+    "write:update-manifest": "node scripts/write-update-manifest.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
